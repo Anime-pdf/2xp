@@ -41,7 +41,7 @@ jobs:
       if: matrix.language == 'cpp'
       run: |
        sudo apt-get update -y
-       sudo apt-get install pkg-config cmake libfreetype6-dev libnotify-dev libsdl2-dev libsqlite3-dev libboost-dev libmariadbclient-dev libmysqlcppconn-dev libwebsockets-dev -y
+       sudo apt-get install pkg-config cmake libboost-dev libmariadbclient-dev libmysqlcppconn-dev libwebsockets-dev -y
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
@@ -59,7 +59,7 @@ jobs:
        mkdir release
        cd release
        cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DANTIBOT=ON -DMYSQL=ON -DWEBSOCKETS=ON ..
-       cmake --build . --config RelWithDebInfo --parallel --target everything
+       cmake --build . --config RelWithDebInfo --parallel --target 2xp
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v1
