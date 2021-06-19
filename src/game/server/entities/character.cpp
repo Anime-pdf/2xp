@@ -2,7 +2,6 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include <antibot/antibot_data.h>
 #include <engine/shared/config.h>
-#include <game/generated/server_data.h>
 #include <game/mapitems.h>
 #include <game/server/gamecontext.h>
 #include <game/server/player.h>
@@ -190,14 +189,14 @@ void CCharacter::HandleNinja()
 	if(m_Core.m_ActiveWeapon != WEAPON_NINJA)
 		return;
 
-	if((Server()->Tick() - m_Ninja.m_ActivationTick) > (g_pData->m_Weapons.m_Ninja.m_Duration * Server()->TickSpeed() / 1000))
+	if((Server()->Tick() - m_Ninja.m_ActivationTick) > (15000 * Server()->TickSpeed() / 1000)) // hardcode -> network.py ninja.duration
 	{
 		// time's up, return
 		RemoveNinja();
 		return;
 	}
 
-	int NinjaTime = m_Ninja.m_ActivationTick + (g_pData->m_Weapons.m_Ninja.m_Duration * Server()->TickSpeed() / 1000) - Server()->Tick();
+	int NinjaTime = m_Ninja.m_ActivationTick + (15000 * Server()->TickSpeed() / 1000) - Server()->Tick(); // hardcode -> network.py ninja.duration
 
 	if(NinjaTime % Server()->TickSpeed() == 0 && NinjaTime / Server()->TickSpeed() <= 5)
 	{
@@ -220,7 +219,7 @@ void CCharacter::HandleNinja()
 	if(m_Ninja.m_CurrentMoveTime > 0)
 	{
 		// Set velocity
-		m_Core.m_Vel = m_Ninja.m_ActivationDir * g_pData->m_Weapons.m_Ninja.m_Velocity;
+		m_Core.m_Vel = m_Ninja.m_ActivationDir * 50; // hardcode -> network.py ninja.velocity
 		vec2 OldPos = m_Pos;
 		GameServer()->Collision()->MoveBox(&m_Core.m_Pos, &m_Core.m_Vel, vec2(GetProximityRadius(), GetProximityRadius()), 0.f);
 
@@ -272,7 +271,7 @@ void CCharacter::HandleNinja()
 				if(m_NumObjectsHit < 10)
 					m_apHitObjects[m_NumObjectsHit++] = aEnts[i];
 
-				aEnts[i]->TakeDamage(vec2(0, -10.0f), g_pData->m_Weapons.m_Ninja.m_pBase->m_Damage, m_pPlayer->GetCID(), WEAPON_NINJA);
+				aEnts[i]->TakeDamage(vec2(0, -10.0f), 9, m_pPlayer->GetCID(), WEAPON_NINJA); // hardcode -> network.py weapons.ninja.base
 			}
 		}
 
@@ -449,7 +448,7 @@ void CCharacter::FireWeapon()
 			vec2 Temp = pTarget->m_Core.m_Vel + normalize(Dir + vec2(0.f, -1.1f)) * 10.0f;
 			Temp = ClampVel(pTarget->m_MoveRestrictions, Temp);
 			Temp -= pTarget->m_Core.m_Vel;
-			pTarget->TakeDamage((vec2(0.f, -1.0f) + Temp) * Strength, g_pData->m_Weapons.m_Hammer.m_pBase->m_Damage,
+			pTarget->TakeDamage((vec2(0.f, -1.0f) + Temp) * Strength, 3, // hardcode -> network.py weapons.hammer.base
 				m_pPlayer->GetCID(), m_Core.m_ActiveWeapon);
 			pTarget->UnFreeze();
 
@@ -609,7 +608,7 @@ void CCharacter::FireWeapon()
 		m_NumObjectsHit = 0;
 
 		m_Ninja.m_ActivationDir = Direction;
-		m_Ninja.m_CurrentMoveTime = g_pData->m_Weapons.m_Ninja.m_Movetime * Server()->TickSpeed() / 1000;
+		m_Ninja.m_CurrentMoveTime = 200 * Server()->TickSpeed() / 1000; // hardcoded -> content.py ninja.movetime
 		m_Ninja.m_OldVelAmount = length(m_Core.m_Vel);
 
 		GameServer()->CreateSound(m_Pos, SOUND_NINJA_FIRE, Teams()->TeamMask(Team(), -1, m_pPlayer->GetCID()));
@@ -1207,7 +1206,7 @@ void CCharacter::SnapCharacter(int SnappingClient, int ID)
 		if(m_FreezeTime > 0 || m_FreezeTime == -1 || m_DeepFreeze)
 			pCharacter->m_AmmoCount = m_FreezeTick + g_Config.m_SvFreezeDelay * Server()->TickSpeed();
 		else if(Weapon == WEAPON_NINJA)
-			pCharacter->m_AmmoCount = m_Ninja.m_ActivationTick + g_pData->m_Weapons.m_Ninja.m_Duration * Server()->TickSpeed() / 1000;
+			pCharacter->m_AmmoCount = m_Ninja.m_ActivationTick + 15000 * Server()->TickSpeed() / 1000; // hardcoded -> content.py ninja.duration
 
 		pCharacter->m_Health = Health;
 		pCharacter->m_Armor = Armor;

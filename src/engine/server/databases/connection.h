@@ -94,7 +94,6 @@ protected:
 int MysqlInit();
 void MysqlUninit();
 
-IDbConnection *CreateSqliteConnection(const char *pFilename, bool Setup);
 // Returns nullptr if MySQL support is not compiled in.
 IDbConnection *CreateMysqlConnection(
 	const char *pDatabase,

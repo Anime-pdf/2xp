@@ -2384,23 +2384,6 @@ int CServer::Run()
 		return -1;
 	}
 
-	if(g_Config.m_SvSqliteFile[0] != '\0')
-	{
-		auto pSqlServers = std::unique_ptr<IDbConnection>(CreateSqliteConnection(
-			g_Config.m_SvSqliteFile, true));
-
-		if(g_Config.m_SvUseSQL)
-		{
-			DbPool()->RegisterDatabase(std::move(pSqlServers), CDbConnectionPool::WRITE_BACKUP);
-		}
-		else
-		{
-			auto pCopy = std::unique_ptr<IDbConnection>(pSqlServers->Copy());
-			DbPool()->RegisterDatabase(std::move(pSqlServers), CDbConnectionPool::READ);
-			DbPool()->RegisterDatabase(std::move(pCopy), CDbConnectionPool::WRITE);
-		}
-	}
-
 	// start server
 	NETADDR BindAddr;
 	int NetType = g_Config.m_SvIpv4Only ? NETTYPE_IPV4 : NETTYPE_ALL;
