@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macOS-latest, windows-latest, ubuntu-18.04]
+        os: [ubuntu-latest, windows-latest, ubuntu-18.04]
         include:
         - os: ubuntu-latest
           cmake-args: -G "Unix Makefiles"
@@ -28,14 +28,6 @@ jobs:
           cmake-path: /usr/bin/
           cmake-args: -G "Unix Makefiles"
           package-file: 2xp-*-linux_x86_64.tar.xz
-          fancy: false
-          env:
-            CFLAGS: -Wdeclaration-after-statement -Werror
-            CXXFLAGS: -Werror
-        - os: macOS-latest
-          cmake-args: -G "Unix Makefiles"
-          build-args: --parallel
-          package-file: 2xp-*-osx.dmg
           fancy: false
           env:
             CFLAGS: -Wdeclaration-after-statement -Werror
@@ -89,7 +81,7 @@ jobs:
         mkdir fancy
         cd fancy
         ${{ matrix.cmake-path }}cmake ${{ matrix.cmake-args }} -DCMAKE_BUILD_TYPE=RelWithDebInfo -DANTIBOT=ON -DMYSQL=ON -DWEBSOCKETS=ON ..
-        ${{ matrix.cmake-path }}cmake --build . --config RelWithDebInfo --target everything ${{ matrix.build-args }}
+        ${{ matrix.cmake-path }}cmake --build . --config RelWithDebInfo --target 2xp ${{ matrix.build-args }}
 
     - name: Package
       run: |
