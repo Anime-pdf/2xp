@@ -5,9 +5,9 @@
 
 #include "alloc.h"
 
-// this include should perhaps be removed
-#include "score.h"
 #include "teeinfo.h"
+#include <game/generated/protocol.h>
+#include <game/server/entities/character.h>
 
 enum
 {
@@ -28,13 +28,11 @@ public:
 	void Reset();
 
 	void TryRespawn();
-	void Respawn(bool WeakHook = false); // with WeakHook == true the character will be spawned after all calls of Tick from other Players
-	CCharacter *ForceSpawn(vec2 Pos); // required for loading savegames
+	void Respawn(); // with WeakHook == true the character will be spawned after all calls of Tick from other Players
 	void SetTeam(int Team, bool DoChatMsg = true);
 	int GetTeam() const { return m_Team; };
 	int GetCID() const { return m_ClientID; };
 	int GetClientVersion() const;
-	bool SetTimerType(int NewType);
 
 	void Tick();
 	void PostTick();
@@ -138,8 +136,6 @@ private:
 	int m_DefEmote;
 	int m_OverrideEmote;
 	int m_OverrideEmoteReset;
-	bool m_Halloween;
-
 public:
 	enum
 	{
@@ -170,17 +166,11 @@ public:
 	bool IsPlaying();
 	int64 m_Last_KickVote;
 	int64 m_Last_Team;
-	int m_ShowOthers;
-	bool m_ShowAll;
 	vec2 m_ShowDistance;
-	bool m_SpecTeam;
 	bool m_NinjaJetpack;
 	bool m_Afk;
-	bool m_HasFinishScore;
 
 	int m_ChatScore;
-
-	bool m_Moderating;
 
 	bool AfkTimer(int new_target_x, int new_target_y); //returns true if kicked
 	void UpdatePlaytime();
@@ -204,13 +194,6 @@ public:
 
 	bool m_FirstPacket;
 	int64 m_LastSQLQuery;
-	void ProcessScoreResult(CScorePlayerResult &Result);
-	std::shared_ptr<CScorePlayerResult> m_ScoreQueryResult;
-	std::shared_ptr<CScorePlayerResult> m_ScoreFinishResult;
-	bool m_NotEligibleForFinish;
-	int64 m_EligibleForFinishCheck;
-	bool m_VotedForPractice;
-	int m_SwapTargetsClientID; //Client ID of the swap target for the given player
 };
 
 #endif

@@ -77,7 +77,7 @@ elseif(TARGET_OS STREQUAL "linux")
 endif()
 
 option(WEBSOCKETS "Enable websockets support" OFF)
-option(MYSQL "Enable mysql support" OFF)
+option(MYSQL "Enable MySQL support" OFF)
 option(UPNP "Enable UPnP support" OFF)
 option(ANTIBOT "Enable support for a dynamic anticheat library" OFF)
 option(DOWNLOAD_GTEST "Download and compile GTest" OFF)
@@ -642,94 +642,8 @@ set_src(ENGINE_INTERFACE GLOB src/engine
   uuid.h
   warning.h
 )
-set_src(ENGINE_SHARED GLOB src/engine/shared
-  compression.cpp
-  compression.h
-  config.cpp
-  config.h
-  config_variables.h
-  console.cpp
-  console.h
-  csv.cpp
-  csv.h
-  datafile.cpp
-  datafile.h
-  demo.cpp
-  demo.h
-  econ.cpp
-  econ.h
-  engine.cpp
-  fifo.cpp
-  fifo.h
-  filecollection.cpp
-  filecollection.h
-  global_uuid_manager.cpp
-  huffman.cpp
-  huffman.h
-  jobs.cpp
-  jobs.h
-  json.cpp
-  json.h
-  kernel.cpp
-  linereader.cpp
-  linereader.h
-  map.cpp
-  map.h
-  masterserver.cpp
-  memheap.cpp
-  memheap.h
-  message.h
-  netban.cpp
-  netban.h
-  network.cpp
-  network.h
-  network_client.cpp
-  network_conn.cpp
-  network_console.cpp
-  network_console_conn.cpp
-  network_server.cpp
-  packer.cpp
-  packer.h
-  protocol.h
-  protocol_ex.cpp
-  protocol_ex.h
-  protocol_ex_msgs.h
-  ringbuffer.cpp
-  ringbuffer.h
-  snapshot.cpp
-  snapshot.h
-  storage.cpp
-  teehistorian_ex.cpp
-  teehistorian_ex.h
-  teehistorian_ex_chunks.h
-  uuid_manager.cpp
-  uuid_manager.h
-  websockets.cpp
-  websockets.h
-)
-set_src(GAME_SHARED GLOB src/game
-  collision.cpp
-  collision.h
-  ddracechat.h
-  ddracecommands.h
-  gamecore.cpp
-  gamecore.h
-  layers.cpp
-  layers.h
-  mapitems.cpp
-  mapitems.h
-  mapitems_ex.cpp
-  mapitems_ex.h
-  mapitems_ex_types.h
-  prng.cpp
-  prng.h
-  teamscore.cpp
-  teamscore.h
-  tuning.h
-  variables.h
-  version.h
-  voting.h
-)
+file(GLOB ENGINE_SHARED src/engine/shared/*)
+file(GLOB GAME_SHARED src/game/*)
 # A bit hacky, but these are needed to register all the UUIDs, even for stuff
 # that doesn't link game.
 set(ENGINE_UUID_SHARED
@@ -784,76 +698,9 @@ set_src(ANTIBOT_SRC GLOB src/antibot
   antibot_null.cpp
 )
 
-set_src(ENGINE_SERVER GLOB_RECURSE src/engine/server
-  antibot.cpp
-  antibot.h
-  authmanager.cpp
-  authmanager.h
-  databases/connection.cpp
-  databases/connection.h
-  databases/connection_pool.cpp
-  databases/connection_pool.h
-  databases/mysql.cpp
-  name_ban.cpp
-  name_ban.h
-  register.cpp
-  register.h
-  server.cpp
-  server.h
-  sql_string_helpers.cpp
-  sql_string_helpers.h
-  upnp.cpp
-  upnp.h
-)
-set_src(GAME_SERVER GLOB_RECURSE src/game/server
-  alloc.h
-  ddracechat.cpp
-  ddracecommands.cpp
-  entities/character.cpp
-  entities/character.h
-  entities/door.cpp
-  entities/door.h
-  entities/dragger.cpp
-  entities/dragger.h
-  entities/flag.cpp
-  entities/flag.h
-  entities/gun.cpp
-  entities/gun.h
-  entities/laser.cpp
-  entities/laser.h
-  entities/light.cpp
-  entities/light.h
-  entities/pickup.cpp
-  entities/pickup.h
-  entities/plasma.cpp
-  entities/plasma.h
-  entities/projectile.cpp
-  entities/projectile.h
-  entity.cpp
-  entity.h
-  eventhandler.cpp
-  eventhandler.h
-  gamecontext.cpp
-  gamecontext.h
-  gamecontroller.cpp
-  gamecontroller.h
-  gamemodes/DDRace.cpp
-  gamemodes/DDRace.h
-  gameworld.cpp
-  gameworld.h
-  player.cpp
-  player.h
-  save.cpp
-  save.h
-  score.cpp
-  score.h
-  teams.cpp
-  teams.h
-  teehistorian.cpp
-  teehistorian.h
-  teeinfo.cpp
-  teeinfo.h
-)
+file(GLOB_RECURSE ENGINE_SERVER src/engine/server/*)
+file(GLOB_RECURSE GAME_SERVER src/game/server/*)
+
 set(GAME_GENERATED_SERVER
   "src/game/generated/wordlist.h"
 )
@@ -894,25 +741,6 @@ add_executable(${TARGET_SERVER}
 target_link_libraries(${TARGET_SERVER} ${LIBS_SERVER})
 list(APPEND TARGETS_OWN ${TARGET_SERVER})
 list(APPEND TARGETS_LINK ${TARGET_SERVER})
-
-########################################################################
-# VARIOUS TARGETS
-########################################################################
-
-set_src(MASTERSRV_SRC GLOB src/mastersrv mastersrv.cpp mastersrv.h)
-set_src(TWPING_SRC GLOB src/twping twping.cpp)
-
-set(TARGET_MASTERSRV mastersrv)
-set(TARGET_TWPING twping)
-
-add_executable(${TARGET_MASTERSRV} EXCLUDE_FROM_ALL ${MASTERSRV_SRC} $<TARGET_OBJECTS:engine-shared> ${DEPS})
-add_executable(${TARGET_TWPING} EXCLUDE_FROM_ALL ${TWPING_SRC} $<TARGET_OBJECTS:engine-shared> ${DEPS})
-
-target_link_libraries(${TARGET_MASTERSRV} ${LIBS})
-target_link_libraries(${TARGET_TWPING} ${LIBS})
-
-list(APPEND TARGETS_OWN ${TARGET_MASTERSRV} ${TARGET_TWPING})
-list(APPEND TARGETS_LINK ${TARGET_MASTERSRV} ${TARGET_TWPING})
 
 ########################################################################
 # TESTS

@@ -5,7 +5,6 @@
 
 #include <engine/antibot.h>
 #include <game/server/entity.h>
-#include <game/server/save.h>
 
 class CAntibot;
 class CGameTeams;
@@ -44,7 +43,6 @@ public:
 	bool IsGrounded();
 
 	void SetWeapon(int W);
-	void SetSolo(bool Solo);
 	void HandleWeaponSwitch();
 	void DoWeaponSwitch();
 
@@ -73,8 +71,6 @@ public:
 	void SetEndlessHook(bool Enable);
 
 	void SetEmote(int Emote, int Tick);
-
-	void Rescue();
 
 	int NeededFaketuning() { return m_NeededFaketuning; }
 	bool IsAlive() const { return m_Alive; }
@@ -164,7 +160,6 @@ private:
 	int m_LastBroadcast;
 	void DDRaceInit();
 	void HandleSkippableTiles(int Index);
-	void SetRescue();
 	void DDRaceTick();
 	void DDRacePostCoreTick();
 	void HandleBroadcast();
@@ -173,12 +168,10 @@ private:
 	IAntibot *Antibot();
 
 	bool m_SetSavePos;
-	CSaveTee m_RescueTee;
 	bool m_Solo;
 
 public:
 	CGameTeams *Teams() { return m_pTeams; }
-	void SetTeams(CGameTeams *pTeams);
 	void SetTeleports(std::map<int, std::vector<vec2>> *pTeleOuts, std::map<int, std::vector<vec2>> *pTeleCheckOuts);
 
 	void FillAntibot(CAntibotCharacterData *pData);
@@ -188,10 +181,6 @@ public:
 	bool UnFreeze();
 	void GiveAllWeapons();
 	void ResetPickups();
-	int m_DDRaceState;
-	int Team();
-	bool CanCollide(int ClientID);
-	bool SameTeam(int ClientID);
 	bool m_Super;
 	bool m_SuperJump;
 	bool m_Jetpack;
@@ -267,14 +256,6 @@ public:
 	bool HasTelegunGun() { return m_Core.m_HasTelegunGun; };
 	bool HasTelegunGrenade() { return m_Core.m_HasTelegunGrenade; };
 	bool HasTelegunLaser() { return m_Core.m_HasTelegunLaser; };
-};
-
-enum
-{
-	DDRACE_NONE = 0,
-	DDRACE_STARTED,
-	DDRACE_CHEAT, // no time and won't start again unless ordered by a mod or death
-	DDRACE_FINISHED
 };
 
 #endif

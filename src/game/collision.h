@@ -84,11 +84,8 @@ public:
 	int GetFTileFlags(int Index) const;
 	int IsTeleport(int Index) const;
 	int IsEvilTeleport(int Index) const;
-	int IsCheckTeleport(int Index) const;
-	int IsCheckEvilTeleport(int Index) const;
 	int IsTeleportWeapon(int Index) const;
 	int IsTeleportHook(int Index) const;
-	int IsTCheckpoint(int Index) const;
 	int IsSpeedup(int Index) const;
 	int IsTune(int Index) const;
 	void GetSpeedup(int Index, vec2 *Dir, int *Force, int *MaxSpeed) const;
@@ -125,10 +122,10 @@ private:
 	class CDoorTile *m_pDoor;
 	struct SSwitchers
 	{
-		bool m_Status[MAX_CLIENTS];
+		bool m_Status;
 		bool m_Initial;
-		int m_EndTick[MAX_CLIENTS];
-		int m_Type[MAX_CLIENTS];
+		int m_EndTick;
+		int m_Type;
 	};
 
 public:

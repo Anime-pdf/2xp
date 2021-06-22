@@ -560,10 +560,6 @@ void CDemoPlayer::DoTick()
 			// stop on error or eof
 			if(m_pConsole)
 				m_pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "demo_player", "end of file");
-#if defined(CONF_VIDEORECORDER)
-			if(IVideo::Current())
-				Stop();
-#endif
 			if(m_Info.m_PreviousTick == -1)
 			{
 				if(m_pConsole)
@@ -672,10 +668,6 @@ void CDemoPlayer::DoTick()
 void CDemoPlayer::Pause()
 {
 	m_Info.m_Info.m_Paused = 1;
-#if defined(CONF_VIDEORECORDER)
-	if(IVideo::Current() && g_Config.m_ClVideoPauseWithDemo)
-		IVideo::Current()->Pause(true);
-#endif
 }
 
 void CDemoPlayer::Unpause()
@@ -686,10 +678,6 @@ void CDemoPlayer::Unpause()
 		m_Info.start_time = time_get();*/
 		m_Info.m_Info.m_Paused = 0;
 	}
-#if defined(CONF_VIDEORECORDER)
-	if(IVideo::Current() && g_Config.m_ClVideoPauseWithDemo)
-		IVideo::Current()->Pause(false);
-#endif
 }
 
 int CDemoPlayer::Load(class IStorage *pStorage, class IConsole *pConsole, const char *pFilename, int StorageType)
@@ -765,7 +753,7 @@ int CDemoPlayer::Load(class IStorage *pStorage, class IConsole *pConsole, const 
 		else
 		{
 			// This hopes whatever happened during the version increment didn't add something here
-			dbg_msg("demo", "demo version incremented, but not by ddnet");
+			dbg_msg("demo", "demo version incremented");
 			io_seek(m_File, -(int)sizeof(ExtensionUuid.m_aData), IOSEEK_CUR);
 		}
 	}
@@ -811,10 +799,6 @@ int CDemoPlayer::Load(class IStorage *pStorage, class IConsole *pConsole, const 
 
 	// scan the file for interesting points
 	ScanFile();
-
-	// reset slice markers
-	g_Config.m_ClDemoSliceBegin = -1;
-	g_Config.m_ClDemoSliceEnd = -1;
 
 	// ready for playback
 	return 0;

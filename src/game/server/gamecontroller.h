@@ -13,8 +13,6 @@
 */
 class IGameController
 {
-	friend class CSaveTeam; // need access to GameServer() and Server()
-
 	vec2 m_aaSpawnPoints[3][64];
 	int m_aNumSpawnPoints[3];
 
@@ -117,7 +115,7 @@ public:
 	void EndRound();
 	void ChangeMap(const char *pToMap);
 
-	bool IsFriendlyFire(int ClientID1, int ClientID2);
+	bool IsFriendlyFire(int ClientID1, int ClientID2) { return true; }
 
 	bool IsForceBalanced();
 
@@ -141,12 +139,6 @@ public:
 	virtual int GetAutoTeam(int NotThisID);
 	virtual bool CanJoinTeam(int Team, int NotThisID);
 	int ClampTeam(int Team);
-
-	virtual int64 GetMaskForPlayerWorldEvent(int Asker, int ExceptID = -1);
-
-	// DDRace
-
-	float m_CurrentRecord;
 };
 
 #endif

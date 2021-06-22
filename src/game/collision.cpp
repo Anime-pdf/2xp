@@ -142,12 +142,9 @@ void CCollision::Init(class CLayers *pLayers)
 		for(int i = 0; i < m_NumSwitchers + 1; ++i)
 		{
 			m_pSwitchers[i].m_Initial = true;
-			for(int j = 0; j < MAX_CLIENTS; ++j)
-			{
-				m_pSwitchers[i].m_Status[j] = true;
-				m_pSwitchers[i].m_EndTick[j] = 0;
-				m_pSwitchers[i].m_Type[j] = 0;
-			}
+			m_pSwitchers[i].m_Status = true;
+			m_pSwitchers[i].m_EndTick = 0;
+			m_pSwitchers[i].m_Type = 0;
 		}
 	}
 }
@@ -654,46 +651,6 @@ int CCollision::IsEvilTeleport(int Index) const
 		return 0;
 
 	if(m_pTele[Index].m_Type == TILE_TELEINEVIL)
-		return m_pTele[Index].m_Number;
-
-	return 0;
-}
-
-int CCollision::IsCheckTeleport(int Index) const
-{
-	if(Index < 0)
-		return 0;
-	if(!m_pTele)
-		return 0;
-
-	if(m_pTele[Index].m_Type == TILE_TELECHECKIN)
-		return m_pTele[Index].m_Number;
-
-	return 0;
-}
-
-int CCollision::IsCheckEvilTeleport(int Index) const
-{
-	if(Index < 0)
-		return 0;
-	if(!m_pTele)
-		return 0;
-
-	if(m_pTele[Index].m_Type == TILE_TELECHECKINEVIL)
-		return m_pTele[Index].m_Number;
-
-	return 0;
-}
-
-int CCollision::IsTCheckpoint(int Index) const
-{
-	if(Index < 0)
-		return 0;
-
-	if(!m_pTele)
-		return 0;
-
-	if(m_pTele[Index].m_Type == TILE_TELECHECK)
 		return m_pTele[Index].m_Number;
 
 	return 0;

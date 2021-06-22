@@ -29,10 +29,6 @@ void CAuthManager::Init()
 	int NumDefaultKeys = 0;
 	if(g_Config.m_SvRconPassword[0])
 		NumDefaultKeys++;
-	if(g_Config.m_SvRconModPassword[0])
-		NumDefaultKeys++;
-	if(g_Config.m_SvRconHelperPassword[0])
-		NumDefaultKeys++;
 	if(m_aKeys.size() == NumDefaultKeys && !g_Config.m_SvRconPassword[0])
 	{
 		secure_random_password(g_Config.m_SvRconPassword, sizeof(g_Config.m_SvRconPassword), 6);

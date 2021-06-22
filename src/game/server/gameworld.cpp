@@ -5,6 +5,7 @@
 #include "entities/character.h"
 #include "entity.h"
 #include "gamecontext.h"
+#include "gamecontroller.h"
 #include "player.h"
 #include <algorithm>
 #include <engine/shared/config.h>
@@ -185,12 +186,9 @@ void CGameWorld::UpdatePlayerMaps()
 			CCharacter *SnapChar = GameServer()->GetPlayerChar(i);
 			if(SnapChar && !SnapChar->m_Super &&
 				!GameServer()->m_apPlayers[i]->IsPaused() && GameServer()->m_apPlayers[i]->GetTeam() != -1 &&
-				!ch->CanCollide(i) &&
 				(!GameServer()->m_apPlayers[i] ||
 					GameServer()->m_apPlayers[i]->GetClientVersion() == VERSION_VANILLA ||
-					(GameServer()->m_apPlayers[i]->GetClientVersion() >= VERSION_DDRACE &&
-						(GameServer()->m_apPlayers[i]->m_ShowOthers == 0 ||
-							(GameServer()->m_apPlayers[i]->m_ShowOthers == 2 && !GameServer()->m_apPlayers[i]->GetCharacter()->SameTeam(j))))))
+					GameServer()->m_apPlayers[i]->GetClientVersion() >= VERSION_DDRACE))
 				Dist[j].first = 1e8;
 			else
 				Dist[j].first = 0;
@@ -250,9 +248,6 @@ void CGameWorld::Tick()
 
 	if(!m_Paused)
 	{
-		if(GameServer()->m_pController->IsForceBalanced())
-			GameServer()->SendChat(-1, CGameContext::CHAT_ALL, "Teams have been balanced");
-		// update all objects
 		for(auto *pEnt : m_apFirstEntityTypes)
 			for(; pEnt;)
 			{
@@ -309,9 +304,6 @@ CCharacter *CGameWorld::IntersectCharacter(vec2 Pos0, vec2 Pos1, float Radius, v
 			continue;
 
 		if(pThisOnly && p != pThisOnly)
-			continue;
-
-		if(CollideWith != -1 && !p->CanCollide(CollideWith))
 			continue;
 
 		vec2 IntersectPos;

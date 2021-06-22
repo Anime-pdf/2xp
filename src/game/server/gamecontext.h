@@ -14,9 +14,10 @@
 #include <base/tl/string.h>
 
 #include "eventhandler.h"
-//#include "gamecontroller.h"
 #include "gameworld.h"
 #include "teehistorian.h"
+
+#include <game/generated/protocol.h>
 
 #include <memory>
 
@@ -50,13 +51,11 @@ enum
 class CConfig;
 class CHeap;
 class CPlayer;
-class CScore;
 class IConsole;
 class IGameController;
 class IEngine;
 class IStorage;
 struct CAntibotData;
-struct CScoreRandomMapResult;
 
 class CGameContext : public IGameServer
 {
@@ -95,13 +94,9 @@ class CGameContext : public IGameServer
 	static void ConSwitchOpen(IConsole::IResult *pResult, void *pUserData);
 	static void ConPause(IConsole::IResult *pResult, void *pUserData);
 	static void ConChangeMap(IConsole::IResult *pResult, void *pUserData);
-	static void ConRandomMap(IConsole::IResult *pResult, void *pUserData);
-	static void ConRandomUnfinishedMap(IConsole::IResult *pResult, void *pUserData);
 	static void ConRestart(IConsole::IResult *pResult, void *pUserData);
 	static void ConBroadcast(IConsole::IResult *pResult, void *pUserData);
 	static void ConSay(IConsole::IResult *pResult, void *pUserData);
-	static void ConSetTeam(IConsole::IResult *pResult, void *pUserData);
-	static void ConSetTeamAll(IConsole::IResult *pResult, void *pUserData);
 	static void ConAddVote(IConsole::IResult *pResult, void *pUserData);
 	static void ConRemoveVote(IConsole::IResult *pResult, void *pUserData);
 	static void ConForceVote(IConsole::IResult *pResult, void *pUserData);
@@ -109,7 +104,6 @@ class CGameContext : public IGameServer
 	static void ConAddMapVotes(IConsole::IResult *pResult, void *pUserData);
 	static void ConVote(IConsole::IResult *pResult, void *pUserData);
 	static void ConVoteNo(IConsole::IResult *pResult, void *pUserData);
-	static void ConDrySave(IConsole::IResult *pResult, void *pUserData);
 	static void ConDumpAntibot(IConsole::IResult *pResult, void *pUserData);
 	static void ConchainSpecialMotdupdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 
@@ -188,12 +182,12 @@ public:
 	CVoteOptionServer *m_pVoteOptionLast;
 
 	// helper functions
-	void CreateDamageInd(vec2 Pos, float AngleMod, int Amount, int64 Mask = -1);
-	void CreateExplosion(vec2 Pos, int Owner, int Weapon, bool NoDamage, int ActivatedTeam, int64 Mask);
-	void CreateHammerHit(vec2 Pos, int64 Mask = -1);
-	void CreatePlayerSpawn(vec2 Pos, int64 Mask = -1);
-	void CreateDeath(vec2 Pos, int Who, int64 Mask = -1);
-	void CreateSound(vec2 Pos, int Sound, int64 Mask = -1);
+	void CreateDamageInd(vec2 Pos, float AngleMod, int Amount);
+	void CreateExplosion(vec2 Pos, int Owner, int Weapon, bool NoDamage);
+	void CreateHammerHit(vec2 Pos);
+	void CreatePlayerSpawn(vec2 Pos);
+	void CreateDeath(vec2 Pos, int Who);
+	void CreateSound(vec2 Pos, int Sound);
 	void CreateSoundGlobal(int Sound, int Target = -1);
 
 	enum
@@ -271,25 +265,15 @@ public:
 	bool OnClientDDNetVersionKnown(int ClientID);
 	virtual void FillAntibot(CAntibotRoundData *pData);
 	int ProcessSpamProtection(int ClientID);
-	int GetDDRaceTeam(int ClientID);
 	// Describes the time when the first player joined the server.
 	int64 m_NonEmptySince;
 	int64 m_LastMapVote;
 	int GetClientVersion(int ClientID) const;
 	bool PlayerExists(int ClientID) const { return m_apPlayers[ClientID]; }
-	// Returns true if someone is actively moderating.
-	bool PlayerModerating() const;
 	void ForceVote(int EnforcerID, bool Success);
-
-	// Checks if player can vote and notify them about the reason
-	bool RateLimitPlayerVote(int ClientID);
-	bool RateLimitPlayerMapVote(int ClientID);
-
-	std::shared_ptr<CScoreRandomMapResult> m_SqlRandomMapResult;
 
 private:
 	bool m_VoteWillPass;
-	class CScore *m_pScore;
 
 	//DDRace Console Commands
 
@@ -300,10 +284,7 @@ private:
 	static void ConNinja(IConsole::IResult *pResult, void *pUserData);
 	static void ConEndlessHook(IConsole::IResult *pResult, void *pUserData);
 	static void ConUnEndlessHook(IConsole::IResult *pResult, void *pUserData);
-	static void ConUnSolo(IConsole::IResult *pResult, void *pUserData);
 	static void ConUnDeep(IConsole::IResult *pResult, void *pUserData);
-	static void ConUnSuper(IConsole::IResult *pResult, void *pUserData);
-	static void ConSuper(IConsole::IResult *pResult, void *pUserData);
 	static void ConShotgun(IConsole::IResult *pResult, void *pUserData);
 	static void ConGrenade(IConsole::IResult *pResult, void *pUserData);
 	static void ConLaser(IConsole::IResult *pResult, void *pUserData);
@@ -327,7 +308,6 @@ private:
 	static void ConMoveRaw(IConsole::IResult *pResult, void *pUserData);
 
 	static void ConToTeleporter(IConsole::IResult *pResult, void *pUserData);
-	static void ConToCheckTeleporter(IConsole::IResult *pResult, void *pUserData);
 	static void ConTeleport(IConsole::IResult *pResult, void *pUserData);
 
 	static void ConCredits(IConsole::IResult *pResult, void *pUserData);
@@ -341,44 +321,14 @@ private:
 	static void ConToggleSpec(IConsole::IResult *pResult, void *pUserData);
 	static void ConToggleSpecVoted(IConsole::IResult *pResult, void *pUserData);
 	static void ConForcePause(IConsole::IResult *pResult, void *pUserData);
-	static void ConTeamTop5(IConsole::IResult *pResult, void *pUserData);
-	static void ConTop(IConsole::IResult *pResult, void *pUserData);
-	static void ConTimes(IConsole::IResult *pResult, void *pUserData);
-	static void ConPoints(IConsole::IResult *pResult, void *pUserData);
-	static void ConTopPoints(IConsole::IResult *pResult, void *pUserData);
 
-	static void ConUTF8(IConsole::IResult *pResult, void *pUserData);
-	static void ConDND(IConsole::IResult *pResult, void *pUserData);
-	static void ConMapInfo(IConsole::IResult *pResult, void *pUserData);
-	static void ConTimeout(IConsole::IResult *pResult, void *pUserData);
-	static void ConPractice(IConsole::IResult *pResult, void *pUserData);
-	static void ConSwap(IConsole::IResult *pResult, void *pUserData);
-	static void ConSave(IConsole::IResult *pResult, void *pUserData);
-	static void ConLoad(IConsole::IResult *pResult, void *pUserData);
-	static void ConMap(IConsole::IResult *pResult, void *pUserData);
-	static void ConTeamRank(IConsole::IResult *pResult, void *pUserData);
-	static void ConRank(IConsole::IResult *pResult, void *pUserData);
-	static void ConBroadTime(IConsole::IResult *pResult, void *pUserData);
-	static void ConJoinTeam(IConsole::IResult *pResult, void *pUserData);
-	static void ConLockTeam(IConsole::IResult *pResult, void *pUserData);
-	static void ConUnlockTeam(IConsole::IResult *pResult, void *pUserData);
-	static void ConInviteTeam(IConsole::IResult *pResult, void *pUserData);
 	static void ConMe(IConsole::IResult *pResult, void *pUserData);
+	static void ConDND(IConsole::IResult *pResult, void *pUserData);
 	static void ConWhisper(IConsole::IResult *pResult, void *pUserData);
 	static void ConConverse(IConsole::IResult *pResult, void *pUserData);
 	static void ConSetEyeEmote(IConsole::IResult *pResult, void *pUserData);
-	static void ConToggleBroadcast(IConsole::IResult *pResult, void *pUserData);
 	static void ConEyeEmote(IConsole::IResult *pResult, void *pUserData);
-	static void ConShowOthers(IConsole::IResult *pResult, void *pUserData);
-	static void ConShowAll(IConsole::IResult *pResult, void *pUserData);
-	static void ConSpecTeam(IConsole::IResult *pResult, void *pUserData);
 	static void ConNinjaJetpack(IConsole::IResult *pResult, void *pUserData);
-	static void ConSayTime(IConsole::IResult *pResult, void *pUserData);
-	static void ConSayTimeAll(IConsole::IResult *pResult, void *pUserData);
-	static void ConTime(IConsole::IResult *pResult, void *pUserData);
-	static void ConSetTimerType(IConsole::IResult *pResult, void *pUserData);
-	static void ConRescue(IConsole::IResult *pResult, void *pUserData);
-	static void ConProtectedKill(IConsole::IResult *pResult, void *pUserData);
 
 	static void ConVoteMute(IConsole::IResult *pResult, void *pUserData);
 	static void ConVoteUnmute(IConsole::IResult *pResult, void *pUserData);
@@ -388,11 +338,8 @@ private:
 	static void ConMuteIP(IConsole::IResult *pResult, void *pUserData);
 	static void ConUnmute(IConsole::IResult *pResult, void *pUserData);
 	static void ConMutes(IConsole::IResult *pResult, void *pUserData);
-	static void ConModerate(IConsole::IResult *pResult, void *pUserData);
 
 	static void ConList(IConsole::IResult *pResult, void *pUserData);
-	static void ConSetDDRTeam(IConsole::IResult *pResult, void *pUserData);
-	static void ConUninvite(IConsole::IResult *pResult, void *pUserData);
 	static void ConFreezeHammer(IConsole::IResult *pResult, void *pUserData);
 	static void ConUnFreezeHammer(IConsole::IResult *pResult, void *pUserData);
 
@@ -421,11 +368,9 @@ private:
 	void WhisperID(int ClientID, int VictimID, const char *pMessage);
 	void Converse(int ClientID, char *pStr);
 	bool IsVersionBanned(int Version);
-	void UnlockTeam(int ClientID, int Team);
 
 public:
 	CLayers *Layers() { return &m_Layers; }
-	class CScore *Score() { return m_pScore; }
 
 	enum
 	{
@@ -444,7 +389,6 @@ public:
 	inline bool IsKickVote() const { return m_VoteType == VOTE_TYPE_KICK; };
 	inline bool IsSpecVote() const { return m_VoteType == VOTE_TYPE_SPECTATE; };
 
-	void SendRecord(int ClientID);
 	static void SendChatResponse(const char *pLine, void *pUser, ColorRGBA PrintColor = {1, 1, 1, 1});
 	static void SendChatResponseAll(const char *pLine, void *pUser);
 	virtual void OnSetAuthed(int ClientID, int Level);
@@ -457,10 +401,4 @@ public:
 	int m_ChatResponseTargetID;
 	int m_ChatPrintCBIndex;
 };
-
-inline int64 CmaskAll() { return -1LL; }
-inline int64 CmaskOne(int ClientID) { return 1LL << ClientID; }
-inline int64 CmaskUnset(int64 Mask, int ClientID) { return Mask ^ CmaskOne(ClientID); }
-inline int64 CmaskAllExceptOne(int ClientID) { return CmaskUnset(CmaskAll(), ClientID); }
-inline bool CmaskIsSet(int64 Mask, int ClientID) { return (Mask & CmaskOne(ClientID)) != 0; }
 #endif

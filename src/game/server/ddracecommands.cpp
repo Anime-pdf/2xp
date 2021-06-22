@@ -2,10 +2,8 @@
 #include "gamecontext.h"
 #include <engine/shared/config.h>
 #include <game/server/entities/character.h>
-#include <game/server/gamemodes/DDRace.h>
+#include <game/server/gamemodes/2xp.h>
 #include <game/server/player.h>
-#include <game/server/save.h>
-#include <game/server/teams.h>
 #include <game/version.h>
 
 bool CheckClientID(int ClientID);
@@ -69,7 +67,6 @@ void CGameContext::MoveCharacter(int ClientID, int X, int Y, bool Raw)
 
 	pChr->Core()->m_Pos.x += ((Raw) ? 1 : 32) * X;
 	pChr->Core()->m_Pos.y += ((Raw) ? 1 : 32) * Y;
-	pChr->m_DDRaceState = DDRACE_CHEAT;
 }
 
 void CGameContext::ConKillPlayer(IConsole::IResult *pResult, void *pUserData)
@@ -118,48 +115,6 @@ void CGameContext::ConUnEndlessHook(IConsole::IResult *pResult, void *pUserData)
 	{
 		pChr->SetEndlessHook(false);
 	}
-}
-
-void CGameContext::ConSuper(IConsole::IResult *pResult, void *pUserData)
-{
-	CGameContext *pSelf = (CGameContext *)pUserData;
-	if(!CheckClientID(pResult->m_ClientID))
-		return;
-	CCharacter *pChr = pSelf->GetPlayerChar(pResult->m_ClientID);
-	if(pChr && !pChr->m_Super)
-	{
-		pChr->m_Super = true;
-		pChr->Core()->m_Super = true;
-		pChr->UnFreeze();
-		pChr->m_TeamBeforeSuper = pChr->Team();
-		pChr->Teams()->SetCharacterTeam(pResult->m_ClientID, TEAM_SUPER);
-		pChr->m_DDRaceState = DDRACE_CHEAT;
-	}
-}
-
-void CGameContext::ConUnSuper(IConsole::IResult *pResult, void *pUserData)
-{
-	CGameContext *pSelf = (CGameContext *)pUserData;
-	if(!CheckClientID(pResult->m_ClientID))
-		return;
-	CCharacter *pChr = pSelf->GetPlayerChar(pResult->m_ClientID);
-	if(pChr && pChr->m_Super)
-	{
-		pChr->m_Super = false;
-		pChr->Core()->m_Super = false;
-		pChr->Teams()->SetForceCharacterTeam(pResult->m_ClientID,
-			pChr->m_TeamBeforeSuper);
-	}
-}
-
-void CGameContext::ConUnSolo(IConsole::IResult *pResult, void *pUserData)
-{
-	CGameContext *pSelf = (CGameContext *)pUserData;
-	if(!CheckClientID(pResult->m_ClientID))
-		return;
-	CCharacter *pChr = pSelf->GetPlayerChar(pResult->m_ClientID);
-	if(pChr)
-		pChr->SetSolo(false);
 }
 
 void CGameContext::ConUnDeep(IConsole::IResult *pResult, void *pUserData)
@@ -273,8 +228,6 @@ void CGameContext::ModifyWeapons(IConsole::IResult *pResult, void *pUserData,
 	{
 		pChr->GiveWeapon(Weapon, Remove);
 	}
-
-	pChr->m_DDRaceState = DDRACE_CHEAT;
 }
 
 void CGameContext::ConToTeleporter(IConsole::IResult *pResult, void *pUserData)
@@ -293,29 +246,6 @@ void CGameContext::ConToTeleporter(IConsole::IResult *pResult, void *pUserData)
 			pChr->Core()->m_Pos = TelePos;
 			pChr->m_Pos = TelePos;
 			pChr->m_PrevPos = TelePos;
-			pChr->m_DDRaceState = DDRACE_CHEAT;
-		}
-	}
-}
-
-void CGameContext::ConToCheckTeleporter(IConsole::IResult *pResult, void *pUserData)
-{
-	CGameContext *pSelf = (CGameContext *)pUserData;
-	unsigned int TeleTo = pResult->GetInteger(0);
-	CGameControllerDDRace *pGameControllerDDRace = (CGameControllerDDRace *)pSelf->m_pController;
-
-	if(pGameControllerDDRace->m_TeleCheckOuts[TeleTo - 1].size())
-	{
-		CCharacter *pChr = pSelf->GetPlayerChar(pResult->m_ClientID);
-		if(pChr)
-		{
-			int TeleOut = pSelf->m_World.m_Core.RandomOr0(pGameControllerDDRace->m_TeleCheckOuts[TeleTo - 1].size());
-			vec2 TelePos = pGameControllerDDRace->m_TeleCheckOuts[TeleTo - 1][TeleOut];
-			pChr->Core()->m_Pos = TelePos;
-			pChr->m_Pos = TelePos;
-			pChr->m_PrevPos = TelePos;
-			pChr->m_DDRaceState = DDRACE_CHEAT;
-			pChr->m_TeleCheckpoint = TeleTo;
 		}
 	}
 }
@@ -339,7 +269,6 @@ void CGameContext::ConTeleport(IConsole::IResult *pResult, void *pUserData)
 		pChr->Core()->m_Pos = pSelf->m_apPlayers[TeleTo]->m_ViewPos;
 		pChr->m_Pos = pSelf->m_apPlayers[TeleTo]->m_ViewPos;
 		pChr->m_PrevPos = pSelf->m_apPlayers[TeleTo]->m_ViewPos;
-		pChr->m_DDRaceState = DDRACE_CHEAT;
 	}
 }
 
@@ -643,67 +572,6 @@ void CGameContext::ConMutes(IConsole::IResult *pResult, void *pUserData)
 	}
 }
 
-void CGameContext::ConModerate(IConsole::IResult *pResult, void *pUserData)
-{
-	CGameContext *pSelf = (CGameContext *)pUserData;
-	if(!CheckClientID(pResult->m_ClientID))
-		return;
-
-	bool HadModerator = pSelf->PlayerModerating();
-
-	CPlayer *pPlayer = pSelf->m_apPlayers[pResult->m_ClientID];
-	pPlayer->m_Moderating = !pPlayer->m_Moderating;
-
-	char aBuf[256];
-
-	if(!HadModerator && pPlayer->m_Moderating)
-		str_format(aBuf, sizeof(aBuf), "Server kick/spec votes will now be actively moderated.");
-
-	if(!pSelf->PlayerModerating())
-		str_format(aBuf, sizeof(aBuf), "Server kick/spec votes are no longer actively moderated.");
-
-	pSelf->SendChat(-1, CHAT_ALL, aBuf, 0);
-
-	if(pPlayer->m_Moderating)
-		pSelf->SendChatTarget(pResult->m_ClientID, "Active moderator mode enabled for you.");
-	else
-		pSelf->SendChatTarget(pResult->m_ClientID, "Active moderator mode disabled for you.");
-}
-
-void CGameContext::ConSetDDRTeam(IConsole::IResult *pResult, void *pUserData)
-{
-	CGameContext *pSelf = (CGameContext *)pUserData;
-	CGameControllerDDRace *pController = (CGameControllerDDRace *)pSelf->m_pController;
-
-	if(g_Config.m_SvTeam == 0 || g_Config.m_SvTeam == 3)
-	{
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "join",
-			"Teams are disabled");
-		return;
-	}
-
-	int Target = pResult->GetVictim();
-	int Team = pResult->GetInteger(1);
-
-	if(Team < TEAM_FLOCK || Team >= TEAM_SUPER)
-		return;
-
-	CCharacter *pChr = pSelf->GetPlayerChar(Target);
-
-	if((pController->m_Teams.m_Core.Team(Target) && pController->m_Teams.GetDDRaceState(pSelf->m_apPlayers[Target]) == DDRACE_STARTED) || (pChr && pController->m_Teams.IsPractice(pChr->Team())))
-		pSelf->m_apPlayers[Target]->KillCharacter(WEAPON_GAME);
-
-	pController->m_Teams.SetForceCharacterTeam(Target, Team);
-}
-
-void CGameContext::ConUninvite(IConsole::IResult *pResult, void *pUserData)
-{
-	CGameContext *pSelf = (CGameContext *)pUserData;
-	CGameControllerDDRace *pController = (CGameControllerDDRace *)pSelf->m_pController;
-
-	pController->m_Teams.SetClientInvited(pResult->GetInteger(1), pResult->GetVictim(), false);
-}
-
 void CGameContext::ConFreezeHammer(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
@@ -744,33 +612,6 @@ void CGameContext::ConVoteNo(IConsole::IResult *pResult, void *pUserData)
 	CGameContext *pSelf = (CGameContext *)pUserData;
 
 	pSelf->ForceVote(pResult->m_ClientID, false);
-}
-
-void CGameContext::ConDrySave(IConsole::IResult *pResult, void *pUserData)
-{
-	CGameContext *pSelf = (CGameContext *)pUserData;
-
-	CPlayer *pPlayer = pSelf->m_apPlayers[pResult->m_ClientID];
-
-	if(!pPlayer || pSelf->Server()->GetAuthedState(pResult->m_ClientID) != AUTHED_ADMIN)
-		return;
-
-	CSaveTeam SavedTeam(pSelf->m_pController);
-	int Result = SavedTeam.Save(pPlayer->GetTeam());
-	if(CSaveTeam::HandleSaveError(Result, pResult->m_ClientID, pSelf))
-		return;
-
-	char aTimestamp[32];
-	str_timestamp(aTimestamp, sizeof(aTimestamp));
-	char aBuf[64];
-	str_format(aBuf, sizeof(aBuf), "%s_%s_%s.save", pSelf->Server()->GetMapName(), aTimestamp, pSelf->Server()->GetAuthName(pResult->m_ClientID));
-	IOHANDLE File = pSelf->Storage()->OpenFile(aBuf, IOFLAG_WRITE, IStorage::TYPE_ALL);
-	if(!File)
-		return;
-
-	int Len = str_length(SavedTeam.GetString());
-	io_write(File, SavedTeam.GetString(), Len);
-	io_close(File);
 }
 
 void CGameContext::ConDumpAntibot(IConsole::IResult *pResult, void *pUserData)

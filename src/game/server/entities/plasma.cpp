@@ -4,16 +4,15 @@
 #include <engine/server.h>
 #include <game/generated/protocol.h>
 #include <game/server/gamecontext.h>
-#include <game/server/gamemodes/DDRace.h>
+#include <game/server/gamemodes/2xp.h>
 #include <game/server/player.h>
-#include <game/server/teams.h>
 
 #include "character.h"
 
 const float PLASMA_ACCEL = 1.1f;
 
 CPlasma::CPlasma(CGameWorld *pGameWorld, vec2 Pos, vec2 Dir, bool Freeze,
-	bool Explosive, int ResponsibleTeam) :
+	bool Explosive) :
 	CEntity(pGameWorld, CGameWorld::ENTTYPE_LASER)
 {
 	m_Pos = Pos;
@@ -22,7 +21,6 @@ CPlasma::CPlasma(CGameWorld *pGameWorld, vec2 Pos, vec2 Dir, bool Freeze,
 	m_Explosive = Explosive;
 	m_EvalTick = Server()->Tick();
 	m_LifeTime = Server()->TickSpeed() * 1.5f;
-	m_ResponsibleTeam = ResponsibleTeam;
 	GameWorld()->InsertEntity(this);
 }
 
@@ -34,12 +32,9 @@ bool CPlasma::HitCharacter()
 	if(!Hit)
 		return false;
 
-	if(Hit->Team() != m_ResponsibleTeam)
-		return false;
 	m_Freeze ? Hit->Freeze() : Hit->UnFreeze();
 	if(m_Explosive)
-		GameServer()->CreateExplosion(m_Pos, -1, WEAPON_GRENADE, true,
-			m_ResponsibleTeam, Hit->Teams()->TeamMask(m_ResponsibleTeam));
+		GameServer()->CreateExplosion(m_Pos, -1, WEAPON_GRENADE, true);
 	m_MarkedForDestroy = true;
 	return true;
 }
@@ -67,18 +62,11 @@ void CPlasma::Tick()
 	HitCharacter();
 
 	int Res = 0;
-	Res = GameServer()->Collision()->IntersectNoLaser(m_Pos, m_Pos + m_Core, 0,
-		0);
+	Res = GameServer()->Collision()->IntersectNoLaser(m_Pos, m_Pos + m_Core, 0, 0);
 	if(Res)
 	{
 		if(m_Explosive)
-			GameServer()->CreateExplosion(
-				m_Pos,
-				-1,
-				WEAPON_GRENADE,
-				true,
-				m_ResponsibleTeam,
-				((CGameControllerDDRace *)GameServer()->m_pController)->m_Teams.TeamMask(m_ResponsibleTeam));
+			GameServer()->CreateExplosion(m_Pos, -1, WEAPON_GRENADE, true);
 		Reset();
 	}
 }
@@ -91,16 +79,7 @@ void CPlasma::Snap(int SnappingClient)
 	CPlayer *SnapPlayer = SnappingClient > -1 ? GameServer()->m_apPlayers[SnappingClient] : 0;
 	int Tick = (Server()->Tick() % Server()->TickSpeed()) % 11;
 
-	if(SnapChar && SnapChar->IsAlive() && (m_Layer == LAYER_SWITCH && m_Number > 0 && !GameServer()->Collision()->m_pSwitchers[m_Number].m_Status[SnapChar->Team()]) && (!Tick))
-		return;
-
-	if(SnapPlayer && (SnapPlayer->GetTeam() == TEAM_SPECTATORS || SnapPlayer->IsPaused()) && SnapPlayer->m_SpectatorID != -1 && GameServer()->GetPlayerChar(SnapPlayer->m_SpectatorID) && GameServer()->GetPlayerChar(SnapPlayer->m_SpectatorID)->Team() != m_ResponsibleTeam && SnapPlayer->m_ShowOthers != 1)
-		return;
-
-	if(SnapPlayer && SnapPlayer->GetTeam() != TEAM_SPECTATORS && !SnapPlayer->IsPaused() && SnapChar && SnapChar && SnapChar->Team() != m_ResponsibleTeam && SnapPlayer->m_ShowOthers != 1)
-		return;
-
-	if(SnapPlayer && (SnapPlayer->GetTeam() == TEAM_SPECTATORS || SnapPlayer->IsPaused()) && SnapPlayer->m_SpectatorID == -1 && SnapChar && SnapChar->Team() != m_ResponsibleTeam && SnapPlayer->m_SpecTeam)
+	if(SnapChar && SnapChar->IsAlive() && (m_Layer == LAYER_SWITCH && m_Number > 0 && !GameServer()->Collision()->m_pSwitchers[m_Number].m_Status) && (!Tick))
 		return;
 
 	CNetObj_Laser *pObj = static_cast<CNetObj_Laser *>(Server()->SnapNewItem(

@@ -141,8 +141,6 @@ void CServerBan::InitServerBan(IConsole *pConsole, IStorage *pStorage, CServer *
 
 	// overwrites base command, todo: improve this
 	Console()->Register("ban", "s[ip|id] ?i[minutes] r[reason]", CFGFLAG_SERVER | CFGFLAG_STORE, ConBanExt, this, "Ban player with ip/client id for x minutes for any reason");
-	Console()->Register("ban_region", "s[region] s[ip|id] ?i[minutes] r[reason]", CFGFLAG_SERVER | CFGFLAG_STORE, ConBanRegion, this, "Ban player in a region");
-	Console()->Register("ban_region_range", "s[region] s[first ip] s[last ip] ?i[minutes] r[reason]", CFGFLAG_SERVER | CFGFLAG_STORE, ConBanRegionRange, this, "Ban range in a region");
 }
 
 template<class T>
@@ -240,28 +238,6 @@ void CServerBan::ConBanExt(IConsole::IResult *pResult, void *pUser)
 	}
 	else
 		ConBan(pResult, pUser);
-}
-
-void CServerBan::ConBanRegion(IConsole::IResult *pResult, void *pUser)
-{
-	const char *pRegion = pResult->GetString(0);
-	if(str_comp_nocase(pRegion, g_Config.m_SvRegionName))
-		return;
-
-	pResult->RemoveArgument(0);
-	ConBanExt(pResult, pUser);
-}
-
-void CServerBan::ConBanRegionRange(IConsole::IResult *pResult, void *pUser)
-{
-	CServerBan *pServerBan = static_cast<CServerBan *>(pUser);
-
-	const char *pRegion = pResult->GetString(0);
-	if(str_comp_nocase(pRegion, g_Config.m_SvRegionName))
-		return;
-
-	pResult->RemoveArgument(0);
-	ConBanRange(pResult, static_cast<CNetBan *>(pServerBan));
 }
 
 void CServer::CClient::Reset()
@@ -3171,8 +3147,6 @@ void CServer::ConShowIps(IConsole::IResult *pResult, void *pUser)
 
 void CServer::ConAddSqlServer(IConsole::IResult *pResult, void *pUserData)
 {
-	if(!g_Config.m_SvUseSQL)
-		return;
 	CServer *pSelf = (CServer *)pUserData;
 
 	if(pResult->NumArguments() != 7 && pResult->NumArguments() != 8)
@@ -3375,18 +3349,6 @@ void CServer::ConchainRconPasswordChange(IConsole::IResult *pResult, void *pUser
 	pfnCallback(pResult, pCallbackUserData);
 }
 
-void CServer::ConchainRconModPasswordChange(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
-{
-	((CServer *)pUserData)->ConchainRconPasswordChangeGeneric(AUTHED_MOD, g_Config.m_SvRconModPassword, pResult);
-	pfnCallback(pResult, pCallbackUserData);
-}
-
-void CServer::ConchainRconHelperPasswordChange(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
-{
-	((CServer *)pUserData)->ConchainRconPasswordChangeGeneric(AUTHED_HELPER, g_Config.m_SvRconHelperPassword, pResult);
-	pfnCallback(pResult, pCallbackUserData);
-}
-
 #if defined(CONF_FAMILY_UNIX)
 void CServer::ConchainConnLoggingServerChange(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
 {
@@ -3457,8 +3419,6 @@ void CServer::RegisterCommands()
 	Console()->Chain("console_output_level", ConchainConsoleOutputLevelUpdate, this);
 
 	Console()->Chain("sv_rcon_password", ConchainRconPasswordChange, this);
-	Console()->Chain("sv_rcon_mod_password", ConchainRconModPasswordChange, this);
-	Console()->Chain("sv_rcon_helper_password", ConchainRconHelperPasswordChange, this);
 
 #if defined(CONF_FAMILY_UNIX)
 	Console()->Chain("sv_conn_logging_server", ConchainConnLoggingServerChange, this);

@@ -2,12 +2,13 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "player.h"
 #include <engine/shared/config.h>
-
-#include "entities/character.h"
-#include "gamecontext.h"
 #include <engine/server.h>
 #include <game/gamecore.h>
 #include <game/version.h>
+
+#include "entities/character.h"
+#include "gamecontext.h"
+#include "gamecontroller.h"
 
 MACRO_ALLOC_POOL_ID_IMPL(CPlayer, MAX_CLIENTS)
 
@@ -17,8 +18,8 @@ CPlayer::CPlayer(CGameContext *pGameServer, int ClientID, int Team)
 {
 	m_pGameServer = pGameServer;
 	m_ClientID = ClientID;
-	m_Team = GameServer()->m_pController->ClampTeam(Team);
 	m_NumInputs = 0;
+	m_Team = Team;
 	Reset();
 	GameServer()->Antibot()->OnPlayerInit(m_ClientID);
 }
@@ -59,7 +60,6 @@ void CPlayer::Reset()
 	m_Sent1stAfkWarning = 0;
 	m_Sent2ndAfkWarning = 0;
 	m_ChatScore = 0;
-	m_Moderating = false;
 	m_EyeEmoteEnabled = true;
 	if(Server()->IsSixup(m_ClientID))
 		m_TimerType = TIMERTYPE_SIXUP;
@@ -75,53 +75,23 @@ void CPlayer::Reset()
 	m_pLastTarget = nullptr;
 	m_TuneZone = 0;
 	m_TuneZoneOld = m_TuneZone;
-	m_Halloween = false;
 	m_FirstPacket = true;
 
 	m_SendVoteIndex = -1;
-
-	if(g_Config.m_Events)
-	{
-		time_t rawtime;
-		struct tm *timeinfo;
-		time(&rawtime);
-		timeinfo = localtime(&rawtime);
-		if((timeinfo->tm_mon == 11 && timeinfo->tm_mday == 31) || (timeinfo->tm_mon == 0 && timeinfo->tm_mday == 1))
-		{ // New Year
-			m_DefEmote = EMOTE_HAPPY;
-		}
-		else if((timeinfo->tm_mon == 9 && timeinfo->tm_mday == 31) || (timeinfo->tm_mon == 10 && timeinfo->tm_mday == 1))
-		{ // Halloween
-			m_DefEmote = EMOTE_ANGRY;
-			m_Halloween = true;
-		}
-		else
-		{
-			m_DefEmote = EMOTE_NORMAL;
-		}
-	}
 	m_OverrideEmoteReset = -1;
 
-	GameServer()->Score()->PlayerData(m_ClientID)->Reset();
-
-	m_ShowOthers = g_Config.m_SvShowOthersDefault;
-	m_ShowAll = g_Config.m_SvShowAllDefault;
 	m_ShowDistance = vec2(1200, 800);
-	m_SpecTeam = 0;
 	m_NinjaJetpack = false;
 
 	m_Paused = PAUSE_NONE;
 	m_DND = false;
 
 	m_LastPause = 0;
-	m_Score = -9999;
-	m_HasFinishScore = false;
+	m_Score = 0;
 
 	// Variable initialized:
 	m_Last_Team = 0;
 	m_LastSQLQuery = 0;
-	m_ScoreQueryResult = nullptr;
-	m_ScoreFinishResult = nullptr;
 
 	int64 Now = Server()->Tick();
 	int64 TickSpeed = Server()->TickSpeed();
@@ -130,15 +100,10 @@ void CPlayer::Reset()
 	// vote after map changes or when they join an empty server.
 	//
 	// Otherwise, block voting in the beginning after joining.
-	if(Now > GameServer()->m_NonEmptySince + 10 * TickSpeed)
+	if(Now > GameServer()->m_NonEmptySince + 3 * TickSpeed)
 		m_FirstVoteTick = Now + g_Config.m_SvJoinVoteDelay * TickSpeed;
 	else
 		m_FirstVoteTick = Now;
-
-	m_NotEligibleForFinish = false;
-	m_EligibleForFinishCheck = 0;
-	m_VotedForPractice = false;
-	m_SwapTargetsClientID = -1;
 }
 
 static int PlayerFlags_SevenToSix(int Flags)
@@ -170,16 +135,6 @@ void CPlayer::Tick()
 #ifdef CONF_DEBUG
 	if(!g_Config.m_DbgDummies || m_ClientID < MAX_CLIENTS - g_Config.m_DbgDummies)
 #endif
-		if(m_ScoreQueryResult != nullptr && m_ScoreQueryResult->m_Completed)
-		{
-			ProcessScoreResult(*m_ScoreQueryResult);
-			m_ScoreQueryResult = nullptr;
-		}
-	if(m_ScoreFinishResult != nullptr && m_ScoreFinishResult->m_Completed)
-	{
-		ProcessScoreResult(*m_ScoreFinishResult);
-		m_ScoreFinishResult = nullptr;
-	}
 
 	if(!Server()->ClientIngame(m_ClientID))
 		return;
@@ -188,15 +143,6 @@ void CPlayer::Tick()
 		m_ChatScore--;
 
 	Server()->SetClientScore(m_ClientID, m_Score);
-
-	if(m_Moderating && m_Afk)
-	{
-		m_Moderating = false;
-		GameServer()->SendChatTarget(m_ClientID, "Active moderator mode disabled because you are afk.");
-
-		if(!GameServer()->PlayerModerating())
-			GameServer()->SendChat(-1, CGameContext::CHAT_ALL, "Server kick/spec votes are no longer actively moderated.");
-	}
 
 	// do latency stuff
 	{
@@ -250,7 +196,7 @@ void CPlayer::Tick()
 				m_pCharacter = 0;
 			}
 		}
-		else if(m_Spawning && !m_WeakHookSpawn)
+		else if(m_Spawning)
 			TryRespawn();
 	}
 	else
@@ -274,14 +220,6 @@ void CPlayer::Tick()
 	if(m_OverrideEmoteReset >= 0 && m_OverrideEmoteReset <= Server()->Tick())
 	{
 		m_OverrideEmoteReset = -1;
-	}
-
-	if(m_Halloween && m_pCharacter && !m_pCharacter->IsPaused())
-	{
-		if(1200 - ((Server()->Tick() - m_pCharacter->GetLastAction()) % (1200)) < 5)
-		{
-			GameServer()->SendEmoticon(GetCID(), EMOTICON_GHOST);
-		}
 	}
 }
 
@@ -310,7 +248,7 @@ void CPlayer::PostPostTick()
 		if(!Server()->ClientIngame(m_ClientID))
 			return;
 
-	if(!GameServer()->m_World.m_Paused && !m_pCharacter && m_Spawning && m_WeakHookSpawn)
+	if(!GameServer()->m_World.m_Paused && !m_pCharacter && m_Spawning)
 		TryRespawn();
 }
 
@@ -338,13 +276,9 @@ void CPlayer::Snap(int SnappingClient)
 	pClientInfo->m_ColorBody = m_TeeInfos.m_ColorBody;
 	pClientInfo->m_ColorFeet = m_TeeInfos.m_ColorFeet;
 
-	int SnappingClientVersion = SnappingClient >= 0 ? GameServer()->GetClientVersion(SnappingClient) : CLIENT_VERSIONNR;
+	int SnappingClientVersion = GameServer()->GetClientVersion(SnappingClient);
 	int Latency = SnappingClient == -1 ? m_Latency.m_Min : GameServer()->m_apPlayers[SnappingClient]->m_aActLatency[m_ClientID];
 	int Score = abs(m_Score) * -1;
-
-	// send 0 if times of others are not shown
-	if(SnappingClient != m_ClientID && g_Config.m_SvHideScore)
-		Score = -9999;
 
 	if(SnappingClient < 0 || !Server()->IsSixup(SnappingClient))
 	{
@@ -374,7 +308,7 @@ void CPlayer::Snap(int SnappingClient)
 			pPlayerInfo->m_PlayerFlags |= protocol7::PLAYERFLAG_ADMIN;
 
 		// Times are in milliseconds for 0.7
-		pPlayerInfo->m_Score = Score == -9999 ? -1 : -Score * 1000;
+		pPlayerInfo->m_Score = Score;
 		pPlayerInfo->m_Latency = Latency;
 	}
 
@@ -416,21 +350,12 @@ void CPlayer::Snap(int SnappingClient)
 	if(m_Paused == PAUSE_PAUSED)
 		pDDNetPlayer->m_Flags |= EXPLAYERFLAG_PAUSED;
 
-	if(SnappingClient >= 0 && Server()->IsSixup(SnappingClient) && m_pCharacter && m_pCharacter->m_DDRaceState == DDRACE_STARTED &&
-		GameServer()->m_apPlayers[SnappingClient]->m_TimerType == TIMERTYPE_SIXUP)
-	{
-		protocol7::CNetObj_PlayerInfoRace *pRaceInfo = static_cast<protocol7::CNetObj_PlayerInfoRace *>(Server()->SnapNewItem(-protocol7::NETOBJTYPE_PLAYERINFORACE, id, sizeof(protocol7::CNetObj_PlayerInfoRace)));
-		if(!pRaceInfo)
-			return;
-		pRaceInfo->m_RaceStartTick = m_pCharacter->m_StartTime;
-	}
-
 	bool ShowSpec = m_pCharacter && m_pCharacter->IsPaused();
 
 	if(SnappingClient >= 0)
 	{
 		CPlayer *pSnapPlayer = GameServer()->m_apPlayers[SnappingClient];
-		ShowSpec = ShowSpec && (GameServer()->GetDDRaceTeam(id) == GameServer()->GetDDRaceTeam(SnappingClient) || pSnapPlayer->m_ShowOthers == 1 || (pSnapPlayer->GetTeam() == TEAM_SPECTATORS || pSnapPlayer->IsPaused()));
+		ShowSpec = ShowSpec && (pSnapPlayer->GetTeam() == TEAM_SPECTATORS || pSnapPlayer->IsPaused());
 	}
 
 	if(ShowSpec)
@@ -488,8 +413,6 @@ void CPlayer::FakeSnap()
 void CPlayer::OnDisconnect()
 {
 	KillCharacter();
-
-	m_Moderating = false;
 }
 
 void CPlayer::OnPredictedInput(CNetObj_PlayerInput *NewInput)
@@ -509,7 +432,7 @@ void CPlayer::OnPredictedInput(CNetObj_PlayerInput *NewInput)
 	if(m_NumInputs == 20 && g_Config.m_SvClientSuggestion[0] != '\0' && GetClientVersion() <= VERSION_DDNET_OLD)
 		GameServer()->SendBroadcast(g_Config.m_SvClientSuggestion, m_ClientID);
 	else if(m_NumInputs == 200 && Server()->IsSixup(m_ClientID))
-		GameServer()->SendBroadcast("This server uses an experimental translation from Teeworlds 0.7 to 0.6. Please report bugs on ddnet.tw/discord", m_ClientID);
+		GameServer()->SendBroadcast("This server uses an experimental translation from Teeworlds 0.7 to 0.6.", m_ClientID);
 }
 
 void CPlayer::OnDirectInput(CNetObj_PlayerInput *NewInput)
@@ -546,7 +469,7 @@ void CPlayer::OnDirectInput(CNetObj_PlayerInput *NewInput)
 	if(m_pCharacter && m_Paused)
 		m_pCharacter->ResetInput();
 
-	if(!m_pCharacter && m_Team != TEAM_SPECTATORS && (NewInput->m_Fire & 1))
+	if(!m_pCharacter && m_Team != TEAM_SPECTATORS)
 		m_Spawning = true;
 
 	// check for activity
@@ -593,22 +516,12 @@ void CPlayer::KillCharacter(int Weapon)
 	}
 }
 
-void CPlayer::Respawn(bool WeakHook)
+void CPlayer::Respawn()
 {
 	if(m_Team != TEAM_SPECTATORS)
 	{
-		m_WeakHookSpawn = WeakHook;
 		m_Spawning = true;
 	}
-}
-
-CCharacter *CPlayer::ForceSpawn(vec2 Pos)
-{
-	m_Spawning = false;
-	m_pCharacter = new(m_ClientID) CCharacter(&GameServer()->m_World);
-	m_pCharacter->Spawn(this, Pos);
-	m_Team = 0;
-	return m_pCharacter;
 }
 
 void CPlayer::SetTeam(int Team, bool DoChatMsg)
@@ -638,52 +551,6 @@ void CPlayer::SetTeam(int Team, bool DoChatMsg)
 	}
 }
 
-bool CPlayer::SetTimerType(int TimerType)
-{
-	if(TimerType == TIMERTYPE_DEFAULT)
-	{
-		if(Server()->IsSixup(m_ClientID))
-			m_TimerType = TIMERTYPE_SIXUP;
-		else
-			SetTimerType(g_Config.m_SvDefaultTimerType);
-
-		return true;
-	}
-
-	if(Server()->IsSixup(m_ClientID))
-	{
-		if(TimerType == TIMERTYPE_SIXUP || TimerType == TIMERTYPE_NONE)
-		{
-			m_TimerType = TimerType;
-			return true;
-		}
-		else
-			return false;
-	}
-
-	if(TimerType == TIMERTYPE_GAMETIMER)
-	{
-		if(GetClientVersion() >= VERSION_DDNET_GAMETICK)
-			m_TimerType = TimerType;
-		else
-			return false;
-	}
-	else if(TimerType == TIMERTYPE_GAMETIMER_AND_BROADCAST)
-	{
-		if(GetClientVersion() >= VERSION_DDNET_GAMETICK)
-			m_TimerType = TimerType;
-		else
-		{
-			m_TimerType = TIMERTYPE_BROADCAST;
-			return false;
-		}
-	}
-	else
-		m_TimerType = TimerType;
-
-	return true;
-}
-
 void CPlayer::TryRespawn()
 {
 	vec2 SpawnPos;
@@ -696,10 +563,7 @@ void CPlayer::TryRespawn()
 	m_pCharacter = new(m_ClientID) CCharacter(&GameServer()->m_World);
 	m_ViewPos = SpawnPos;
 	m_pCharacter->Spawn(this, SpawnPos);
-	GameServer()->CreatePlayerSpawn(SpawnPos, GameServer()->m_pController->GetMaskForPlayerWorldEvent(m_ClientID));
-
-	if(g_Config.m_SvTeam == 3)
-		m_pCharacter->SetSolo(true);
+	GameServer()->CreatePlayerSpawn(SpawnPos);
 }
 
 bool CPlayer::AfkTimer(int NewTargetX, int NewTargetY)
@@ -821,8 +685,8 @@ void CPlayer::ProcessPause()
 	if(m_Paused == PAUSE_SPEC && !m_pCharacter->IsPaused() && m_pCharacter->IsGrounded() && m_pCharacter->m_Pos == m_pCharacter->m_PrevPos)
 	{
 		m_pCharacter->Pause(true);
-		GameServer()->CreateDeath(m_pCharacter->m_Pos, m_ClientID, GameServer()->m_pController->GetMaskForPlayerWorldEvent(m_ClientID));
-		GameServer()->CreateSound(m_pCharacter->m_Pos, SOUND_PLAYER_DIE, GameServer()->m_pController->GetMaskForPlayerWorldEvent(m_ClientID));
+		GameServer()->CreateDeath(m_pCharacter->m_Pos, m_ClientID);
+		GameServer()->CreateSound(m_pCharacter->m_Pos, SOUND_PLAYER_DIE);
 	}
 }
 
@@ -851,7 +715,7 @@ int CPlayer::Pause(int State, bool Force)
 				}
 				m_pCharacter->Pause(false);
 				m_ViewPos = m_pCharacter->m_Pos;
-				GameServer()->CreatePlayerSpawn(m_pCharacter->m_Pos, GameServer()->m_pController->GetMaskForPlayerWorldEvent(m_ClientID));
+				GameServer()->CreatePlayerSpawn(m_pCharacter->m_Pos);
 			}
 			// fall-thru
 		case PAUSE_SPEC:
@@ -917,83 +781,6 @@ void CPlayer::SpectatePlayerName(const char *pName)
 		{
 			m_SpectatorID = i;
 			return;
-		}
-	}
-}
-
-void CPlayer::ProcessScoreResult(CScorePlayerResult &Result)
-{
-	if(Result.m_Success) // SQL request was successful
-	{
-		switch(Result.m_MessageKind)
-		{
-		case CScorePlayerResult::DIRECT:
-			for(auto &aMessage : Result.m_Data.m_aaMessages)
-			{
-				if(aMessage[0] == 0)
-					break;
-				GameServer()->SendChatTarget(m_ClientID, aMessage);
-			}
-			break;
-		case CScorePlayerResult::ALL:
-		{
-			bool PrimaryMessage = true;
-			for(auto &aMessage : Result.m_Data.m_aaMessages)
-			{
-				if(aMessage[0] == 0)
-					break;
-
-				if(GameServer()->ProcessSpamProtection(m_ClientID) && PrimaryMessage)
-					break;
-
-				GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aMessage, -1);
-				PrimaryMessage = false;
-			}
-			break;
-		}
-		case CScorePlayerResult::BROADCAST:
-			if(Result.m_Data.m_Broadcast[0] != 0)
-				GameServer()->SendBroadcast(Result.m_Data.m_Broadcast, -1);
-			break;
-		case CScorePlayerResult::MAP_VOTE:
-			GameServer()->m_VoteType = CGameContext::VOTE_TYPE_OPTION;
-			GameServer()->m_LastMapVote = time_get();
-
-			char aCmd[256];
-			str_format(aCmd, sizeof(aCmd),
-				"sv_reset_file types/%s/flexreset.cfg; change_map \"%s\"",
-				Result.m_Data.m_MapVote.m_Server, Result.m_Data.m_MapVote.m_Map);
-
-			char aChatmsg[512];
-			str_format(aChatmsg, sizeof(aChatmsg), "'%s' called vote to change server option '%s' (%s)",
-				Server()->ClientName(m_ClientID), Result.m_Data.m_MapVote.m_Map, "/map");
-
-			GameServer()->CallVote(m_ClientID, Result.m_Data.m_MapVote.m_Map, aCmd, "/map", aChatmsg);
-			break;
-		case CScorePlayerResult::PLAYER_INFO:
-			GameServer()->Score()->PlayerData(m_ClientID)->Set(Result.m_Data.m_Info.m_Time, Result.m_Data.m_Info.m_CpTime);
-			m_Score = Result.m_Data.m_Info.m_Score;
-			m_HasFinishScore = Result.m_Data.m_Info.m_HasFinishScore;
-			// -9999 stands for no time and isn't displayed in scoreboard, so
-			// shift the time by a second if the player actually took 9999
-			// seconds to finish the map.
-			if(m_HasFinishScore && m_Score == -9999)
-				m_Score = -10000;
-			Server()->ExpireServerInfo();
-			int Birthday = Result.m_Data.m_Info.m_Birthday;
-			if(Birthday != 0)
-			{
-				char aBuf[512];
-				str_format(aBuf, sizeof(aBuf),
-					"Happy DDNet birthday to %s for finishing their first map %d year%s ago!",
-					Server()->ClientName(m_ClientID), Birthday, Birthday > 1 ? "s" : "");
-				GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf, m_ClientID);
-				str_format(aBuf, sizeof(aBuf),
-					"Happy DDNet birthday, %s!\nYou have finished your first map exactly %d year%s ago!",
-					Server()->ClientName(m_ClientID), Birthday, Birthday > 1 ? "s" : "");
-				GameServer()->SendBroadcast(aBuf, m_ClientID);
-			}
-			break;
 		}
 	}
 }
