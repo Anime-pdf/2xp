@@ -60,7 +60,7 @@ void CGameControllerDDRace::Tick()
 	IGameController::Tick();
 }
 
-void CGameControllerDDRace::DoTeamChange(class CPlayer *pPlayer, int Team, bool DoChatMsg)
+void CGameControllerDDRace::DoTeamChange(class CPlayer *pPlayer, int Team)
 {
 	Team = ClampTeam(Team);
 	if(Team == pPlayer->GetTeam())
@@ -68,7 +68,7 @@ void CGameControllerDDRace::DoTeamChange(class CPlayer *pPlayer, int Team, bool 
 
 	CCharacter *pCharacter = pPlayer->GetCharacter();
 
-	IGameController::DoTeamChange(pPlayer, Team, DoChatMsg);
+	IGameController::DoTeamChange(pPlayer, Team);
 }
 
 void CGameControllerDDRace::InitTeleporter()

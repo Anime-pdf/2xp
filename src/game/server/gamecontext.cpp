@@ -387,7 +387,7 @@ void CGameContext::SendChat(int ChatterClientID, int Team, const char *pText, in
 			bool Send = (Server()->IsSixup(i) && (Flags & CHAT_SIXUP)) ||
 				    (!Server()->IsSixup(i) && (Flags & CHAT_SIX));
 
-			if(!m_apPlayers[i]->m_DND && Send)
+			if(Send)
 				Server()->SendPackMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_NORECORD, i);
 		}
 	}
@@ -490,6 +490,20 @@ void CGameContext::SendBroadcast(const char *pText, int ClientID, bool IsImporta
 	Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, ClientID);
 	m_apPlayers[ClientID]->m_LastBroadcast = Server()->Tick();
 	m_apPlayers[ClientID]->m_LastBroadcastImportance = IsImportant;
+}
+
+void CGameContext::SendBroadcastToActivePlayers(const char *pText)
+{
+	CNetMsg_Sv_Broadcast Msg;
+	Msg.m_pMessage = pText;
+
+	for(auto &pPlayer : m_apPlayers)
+	{
+		if(pPlayer)
+		{
+			Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, pPlayer->GetCID());
+		}
+	}
 }
 
 void CGameContext::StartVote(const char *pDesc, const char *pCommand, const char *pReason, const char *pSixupDesc)

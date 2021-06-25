@@ -197,28 +197,6 @@ void CGameContext::ConTogglePauseVoted(IConsole::IResult *pResult, void *pUserDa
 	ToggleSpecPauseVoted(pResult, pUserData, CPlayer::PAUSE_PAUSED);
 }
 
-void CGameContext::ConDND(IConsole::IResult *pResult, void *pUserData)
-{
-	CGameContext *pSelf = (CGameContext *)pUserData;
-	if(!CheckClientID(pResult->m_ClientID))
-		return;
-
-	CPlayer *pPlayer = pSelf->m_apPlayers[pResult->m_ClientID];
-	if(!pPlayer)
-		return;
-
-	if(pPlayer->m_DND)
-	{
-		pPlayer->m_DND = false;
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "dnd", "You will receive global chat and server messages");
-	}
-	else
-	{
-		pPlayer->m_DND = true;
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "dnd", "You will not receive any further global chat and server messages");
-	}
-}
-
 void CGameContext::ConMe(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;

@@ -27,8 +27,7 @@ IGameController::IGameController(class CGameContext *pGameServer)
 	m_pGameType = "unknown";
 
 	//
-	DoWarmup(g_Config.m_SvWarmup);
-	m_GameOverTick = -1;
+	m_GameOverTick = -2;
 	m_SuddenDeath = 0;
 	m_RoundStartTick = Server()->Tick();
 	m_RoundCount = 0;
@@ -41,6 +40,8 @@ IGameController::IGameController(class CGameContext *pGameServer)
 	m_aNumSpawnPoints[0] = 0;
 	m_aNumSpawnPoints[1] = 0;
 	m_aNumSpawnPoints[2] = 0;
+
+	HandleWarmup(30); // g_Config.m_SvWarmup
 }
 
 IGameController::~IGameController()
@@ -357,11 +358,11 @@ bool IGameController::OnEntity(int Index, vec2 Pos, int Layer, int Flags, int Nu
 	}
 	else if(Index >= ENTITY_DRAGGER_WEAK && Index <= ENTITY_DRAGGER_STRONG)
 	{
-		CDraggerTeam(&GameServer()->m_World, Pos, Index - ENTITY_DRAGGER_WEAK + 1, false, Layer, Number);
+		CDragger(&GameServer()->m_World, Pos, Index - ENTITY_DRAGGER_WEAK + 1, false, Layer, Number);
 	}
 	else if(Index >= ENTITY_DRAGGER_WEAK_NW && Index <= ENTITY_DRAGGER_STRONG_NW)
 	{
-		CDraggerTeam(&GameServer()->m_World, Pos, Index - ENTITY_DRAGGER_WEAK_NW + 1, true, Layer, Number);
+		CDragger(&GameServer()->m_World, Pos, Index - ENTITY_DRAGGER_WEAK_NW + 1, true, Layer, Number);
 	}
 	else if(Index == ENTITY_PLASMAE)
 	{
@@ -445,17 +446,15 @@ const char *IGameController::GetTeamName(int Team)
 
 void IGameController::StartRound()
 {
-	ResetGame();
+	if(m_Warmup)
+		return;
 
 	m_RoundStartTick = Server()->Tick();
 	m_SuddenDeath = 0;
-	m_GameOverTick = -1;
+	m_GameOverTick = GCS_ROUND_RUNNING;
 	GameServer()->m_World.m_Paused = false;
 	m_ForceBalanced = false;
 	Server()->DemoRecorder_HandleAutoStart();
-
-	DoWarmup(30);
-
 
 	char aBuf[256];
 	str_format(aBuf, sizeof(aBuf), "start round type='%s' teamplay='%d'", m_pGameType, m_GameFlags & GAMEFLAG_TEAMS);
@@ -494,6 +493,46 @@ void IGameController::HandleCharacterTiles(CCharacter *pChr, int MapIndex)
 	// Do nothing by default
 }
 
+bool IGameController::ArePlayersEnough()
+{
+	int Amount = 0;
+
+	for(auto &pPlayer : GameServer()->m_apPlayers)
+		if(pPlayer)
+			if(pPlayer->IsPlaying()/* && pPlayer->GetAccount()*/)
+				Amount++;
+
+	if(Amount > 1)
+		return true;
+	return false;
+}
+
+bool IGameController::HandleWarmup(int Seconds)
+{
+	if(m_Warmup > 0)
+	{
+		m_Warmup--;
+			
+		if(!m_Warmup)
+			return true;
+	}
+	else
+	{
+		if(ArePlayersEnough() && m_GameOverTick == GCS_ROUND_END)
+		{
+			ResetGame();
+			DoWarmup(Seconds);
+		}
+		else
+		{
+			DoWarmup(0);
+			return false;
+		}
+	}
+
+	return false;
+}
+
 void IGameController::DoWarmup(int Seconds)
 {
 	if(Seconds < 0)
@@ -514,20 +553,14 @@ bool IGameController::CanBeMovedOnBalance(int ClientID)
 
 void IGameController::Tick()
 {
-	// do warmup
-	if(m_Warmup)
-	{
-		m_Warmup--;
-		if(!m_Warmup)
-			StartRound();
-	}
+	if(HandleWarmup(30))
+		StartRound();
 
-	if(m_GameOverTick != -1)
+	if(m_GameOverTick > -1)
 	{
-		// game over.. wait for restart
-		if(Server()->Tick() > m_GameOverTick + Server()->TickSpeed() * 10)
+		if(Server()->Tick() > m_GameOverTick + Server()->TickSpeed() * 3) // g_Config.m_SvGameOver
 		{
-			StartRound();
+			m_GameOverTick = GCS_ROUND_END;
 			m_RoundCount++;
 		}
 	}
@@ -543,7 +576,7 @@ void IGameController::Snap(int SnappingClient)
 
 	pGameInfoObj->m_GameFlags = m_GameFlags;
 	pGameInfoObj->m_GameStateFlags = 0;
-	if(m_GameOverTick != -1)
+	if(m_GameOverTick > -1)
 		pGameInfoObj->m_GameStateFlags |= GAMESTATEFLAG_GAMEOVER;
 	if(m_SuddenDeath)
 		pGameInfoObj->m_GameStateFlags |= GAMESTATEFLAG_SUDDENDEATH;
@@ -579,7 +612,7 @@ void IGameController::Snap(int SnappingClient)
 
 		pGameData->m_GameStartTick = m_RoundStartTick;
 		pGameData->m_GameStateFlags = 0;
-		if(m_GameOverTick != -1)
+		if(m_GameOverTick > -1)
 			pGameData->m_GameStateFlags |= protocol7::GAMESTATEFLAG_GAMEOVER;
 		if(m_SuddenDeath)
 			pGameData->m_GameStateFlags |= protocol7::GAMESTATEFLAG_SUDDENDEATH;
@@ -614,35 +647,31 @@ int IGameController::GetAutoTeam(int NotThisID)
 
 bool IGameController::CanJoinTeam(int Team, int NotThisID)
 {
+	if (GameServer()->m_apPlayers[NotThisID]->GetGameTeam() == TXP_TEAM_DIED)
+		return false;
 	return true;
 }
 
 int IGameController::ClampTeam(int Team)
 {
-	if(Team < 0)
+	if (Team < 0)
 		return TEAM_SPECTATORS;
 	return 0;
 }
 
-void IGameController::DoTeamChange(CPlayer *pPlayer, int Team, bool DoChatMsg)
+void IGameController::DoTeamChange(CPlayer *pPlayer, int Team)
 {
 	Team = ClampTeam(Team);
 	if(Team == pPlayer->GetTeam())
 		return;
 
 	pPlayer->SetTeam(Team);
-	int ClientID = pPlayer->GetCID();
+	//int ClientID = pPlayer->GetCID();
 
-	char aBuf[128];
-	DoChatMsg = false;
-	if(DoChatMsg)
-	{
-		str_format(aBuf, sizeof(aBuf), "'%s' joined the %s", Server()->ClientName(ClientID), GameServer()->m_pController->GetTeamName(Team));
-		GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
-	}
+	//char aBuf[128];
 
-	str_format(aBuf, sizeof(aBuf), "team_join player='%d:%s' m_Team=%d", ClientID, Server()->ClientName(ClientID), Team);
-	GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", aBuf);
+	//str_format(aBuf, sizeof(aBuf), "team_join player='%d:%s' m_Team=%d", ClientID, Server()->ClientName(ClientID), Team);
+	//GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", aBuf);
 
 	// OnPlayerInfoChange(pPlayer);
 }

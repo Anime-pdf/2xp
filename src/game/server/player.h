@@ -29,8 +29,10 @@ public:
 
 	void TryRespawn();
 	void Respawn(); // with WeakHook == true the character will be spawned after all calls of Tick from other Players
-	void SetTeam(int Team, bool DoChatMsg = true);
+	void SetTeam(int Team);
 	int GetTeam() const { return m_Team; };
+	void SetGameTeam(int Team, bool DoChatMsg = true);
+	int GetGameTeam() const { return m_GameTeam; }
 	int GetCID() const { return m_ClientID; };
 	int GetClientVersion() const;
 
@@ -84,7 +86,6 @@ public:
 	int m_LastCommands[4];
 	int m_LastCommandPos;
 	int m_LastWhisperTo;
-	int m_LastInvited;
 
 	int m_SendVoteIndex;
 
@@ -97,7 +98,6 @@ public:
 	bool m_ForceBalanced;
 	int m_LastActionTick;
 	int m_TeamChangeTick;
-	bool m_SentSemicolonTip;
 	struct
 	{
 		int m_TargetX;
@@ -125,9 +125,9 @@ private:
 
 	//
 	bool m_Spawning;
-	bool m_WeakHookSpawn;
 	int m_ClientID;
 	int m_Team;
+	int m_GameTeam;
 
 	int m_Paused;
 	int64 m_ForcePauseTime;
@@ -154,9 +154,7 @@ public:
 		TIMERTYPE_NONE,
 	};
 
-	bool m_DND;
 	int64 m_FirstVoteTick;
-	char m_TimeoutCode[64];
 
 	void ProcessPause();
 	int Pause(int State, bool Force);

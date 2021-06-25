@@ -148,7 +148,6 @@ void CRegister::RegisterUpdate(int Nettype)
 		m_RegisterFirst = 1;
 		RegisterNewState(REGISTERSTATE_UPDATE_ADDRS);
 		m_pMasterServer->RefreshAddresses(Nettype);
-		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, m_pName, "refreshing ip addresses");
 	}
 	else if(m_RegisterState == REGISTERSTATE_UPDATE_ADDRS)
 	{
@@ -175,8 +174,6 @@ void CRegister::RegisterUpdate(int Nettype)
 				m_aMasterserverInfo[i].m_LastSend = 0;
 				m_aMasterserverInfo[i].m_Token = NET_SECURITY_TOKEN_UNKNOWN;
 			}
-
-			m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, m_pName, "fetching server counts");
 			m_LastTokenRequest = Now;
 			RegisterNewState(REGISTERSTATE_QUERY_COUNT);
 		}

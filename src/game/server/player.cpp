@@ -20,6 +20,7 @@ CPlayer::CPlayer(CGameContext *pGameServer, int ClientID, int Team)
 	m_ClientID = ClientID;
 	m_NumInputs = 0;
 	m_Team = Team;
+	m_GameTeam = IGameController::TXP_TEAM_H;
 	Reset();
 	GameServer()->Antibot()->OnPlayerInit(m_ClientID);
 }
@@ -42,8 +43,7 @@ void CPlayer::Reset()
 	m_SpectatorID = SPEC_FREEVIEW;
 	m_LastActionTick = Server()->Tick();
 	m_TeamChangeTick = Server()->Tick();
-	m_LastInvited = 0;
-	m_WeakHookSpawn = false;
+
 
 	int *pIdMap = Server()->GetIdMap(m_ClientID);
 	for(int i = 1; i < VANILLA_MAX_CLIENTS; i++)
@@ -70,7 +70,6 @@ void CPlayer::Reset()
 	m_Afk = true;
 	m_LastWhisperTo = -1;
 	m_LastSetSpectatorMode = 0;
-	m_TimeoutCode[0] = '\0';
 	delete m_pLastTarget;
 	m_pLastTarget = nullptr;
 	m_TuneZone = 0;
@@ -84,7 +83,8 @@ void CPlayer::Reset()
 	m_NinjaJetpack = false;
 
 	m_Paused = PAUSE_NONE;
-	m_DND = false;
+
+	m_GameTeam = IGameController::TXP_TEAM_H;
 
 	m_LastPause = 0;
 	m_Score = 0;
@@ -522,9 +522,14 @@ void CPlayer::Respawn()
 	{
 		m_Spawning = true;
 	}
+
+	//char aBuf[128];
+	//str_format(aBuf, sizeof(aBuf), "\n[HHHHHHHHHHHHHHHH]\n%s", Server()->ClientName(m_ClientID)); // 7 symbols -> nickname height
+
+	//GameServer()->SendBroadcastToActivePlayers(aBuf);
 }
 
-void CPlayer::SetTeam(int Team, bool DoChatMsg)
+void CPlayer::SetTeam(int Team)
 {
 	KillCharacter();
 
@@ -536,7 +541,7 @@ void CPlayer::SetTeam(int Team, bool DoChatMsg)
 	protocol7::CNetMsg_Sv_Team Msg;
 	Msg.m_ClientID = m_ClientID;
 	Msg.m_Team = m_Team;
-	Msg.m_Silent = !DoChatMsg;
+	Msg.m_Silent = true;
 	Msg.m_CooldownTick = m_LastSetTeam + Server()->TickSpeed() * g_Config.m_SvTeamChangeDelay;
 	Server()->SendPackMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_NORECORD, -1);
 
@@ -551,6 +556,60 @@ void CPlayer::SetTeam(int Team, bool DoChatMsg)
 	}
 }
 
+void CPlayer::SetGameTeam(int Team, bool DoChatMsg)
+{
+	if(m_GameTeam == Team)
+		return;
+
+	if (Team == IGameController::TXP_TEAM_DIED)
+	{
+		SetTeam(TEAM_SPECTATORS);
+
+		if (m_GameTeam == IGameController::TXP_TEAM_H)
+		{
+			if (DoChatMsg)
+			{
+				char aBuf[256];
+				str_format(aBuf, sizeof(aBuf), "\n\n\n\n\n\n\n\n\n\n\n\n[Human]\n\n%s died.\n\n\nR.I.P");
+
+				GameServer()->SendBroadcastToActivePlayers(aBuf);
+			}
+		}
+		else
+		{
+			if(DoChatMsg)
+			{
+				char aBuf[256];
+				str_format(aBuf, sizeof(aBuf), "\n\n\n\n\n\n\n\n\n\n\n\n[Zombie]\n\n%s died.\n\n\nR.I.P");
+
+				GameServer()->SendBroadcastToActivePlayers(aBuf);
+			}
+		}
+	}
+	else if(Team == IGameController::TXP_TEAM_H)
+	{
+		if(DoChatMsg)
+		{
+			char aBuf[256];
+			str_format(aBuf, sizeof(aBuf), "\n\n\n\n\n\n\n\n\n\n\n\n[Human]\n\n%s revived.\n\n\nR.I.P");
+
+			GameServer()->SendBroadcastToActivePlayers(aBuf);
+		}
+	}
+	else
+	{
+		if(DoChatMsg)
+		{
+			char aBuf[256];
+			str_format(aBuf, sizeof(aBuf), "\n\n\n\n\n\n\n\n\n\n\n\n[Human]\n\n%s was infected.\n\n\nR.I.P");
+
+			GameServer()->SendBroadcastToActivePlayers(aBuf);
+		}
+	}
+
+	m_GameTeam = Team;
+}
+
 void CPlayer::TryRespawn()
 {
 	vec2 SpawnPos;
@@ -558,7 +617,6 @@ void CPlayer::TryRespawn()
 	if(!GameServer()->m_pController->CanSpawn(m_Team, &SpawnPos))
 		return;
 
-	m_WeakHookSpawn = false;
 	m_Spawning = false;
 	m_pCharacter = new(m_ClientID) CCharacter(&GameServer()->m_World);
 	m_ViewPos = SpawnPos;

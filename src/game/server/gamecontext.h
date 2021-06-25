@@ -213,6 +213,7 @@ public:
 	void SendMotd(int ClientID);
 	void SendSettings(int ClientID);
 	void SendBroadcast(const char *pText, int ClientID, bool IsImportant = true);
+	void SendBroadcastToActivePlayers(const char *pText);
 
 	void List(int ClientID, const char *filter);
 
@@ -323,7 +324,6 @@ private:
 	static void ConForcePause(IConsole::IResult *pResult, void *pUserData);
 
 	static void ConMe(IConsole::IResult *pResult, void *pUserData);
-	static void ConDND(IConsole::IResult *pResult, void *pUserData);
 	static void ConWhisper(IConsole::IResult *pResult, void *pUserData);
 	static void ConConverse(IConsole::IResult *pResult, void *pUserData);
 	static void ConSetEyeEmote(IConsole::IResult *pResult, void *pUserData);

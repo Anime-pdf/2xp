@@ -22,7 +22,7 @@ public:
 
 	virtual void Tick() override;
 
-	virtual void DoTeamChange(class CPlayer *pPlayer, int Team, bool DoChatMsg = true) override;
+	virtual void DoTeamChange(class CPlayer *pPlayer, int Team) override;
 
 	void InitTeleporter();
 

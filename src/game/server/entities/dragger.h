@@ -27,14 +27,4 @@ public:
 	virtual void Tick();
 	virtual void Snap(int snapping_client);
 };
-
-class CDraggerTeam
-{
-	CDragger *m_Draggers[MAX_CLIENTS];
-
-public:
-	CDraggerTeam(CGameWorld *pGameWorld, vec2 Pos, float Strength, bool NW = false, int Layer = 0, int Number = 0);
-	//~CDraggerTeam();
-};
-
 #endif // GAME_SERVER_ENTITIES_DRAGGER_H

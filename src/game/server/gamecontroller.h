@@ -49,6 +49,13 @@ protected:
 
 	char m_aMapWish[MAX_MAP_LENGTH];
 
+	// for m_GameOverTick
+	enum
+	{
+		GCS_ROUND_RUNNING = -1,
+		GCS_ROUND_END = -2,
+	};
+
 	int m_RoundStartTick;
 	int m_GameOverTick;
 	int m_SuddenDeath;
@@ -131,7 +138,7 @@ public:
 	//spawn
 	virtual bool CanSpawn(int Team, vec2 *pPos);
 
-	virtual void DoTeamChange(class CPlayer *pPlayer, int Team, bool DoChatMsg = true);
+	virtual void DoTeamChange(class CPlayer *pPlayer, int Team);
 	/*
 
 	*/
@@ -139,6 +146,16 @@ public:
 	virtual int GetAutoTeam(int NotThisID);
 	virtual bool CanJoinTeam(int Team, int NotThisID);
 	int ClampTeam(int Team);
+
+	bool HandleWarmup(int Seconds);
+	bool ArePlayersEnough();
+
+	enum
+	{
+		TXP_TEAM_Z, // zombie
+		TXP_TEAM_H, // human
+		TXP_TEAM_DIED
+	};
 };
 
 #endif
