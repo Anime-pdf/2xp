@@ -5,7 +5,7 @@
 
 #include "kernel.h"
 #include <base/color.h>
-#include <engine/storage.h>
+#include "storage.h"
 
 class IConsole : public IInterface
 {
