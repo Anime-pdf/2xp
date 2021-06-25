@@ -36,9 +36,6 @@
 #include <engine/shared/linereader.h>
 #include <vector>
 #include <zlib.h>
-
-#include "databases/connection.h"
-#include "databases/connection_pool.h"
 #include "register.h"
 
 #if defined(CONF_FAMILY_WINDOWS)
@@ -295,9 +292,6 @@ CServer::CServer() :
 #ifdef CONF_FAMILY_UNIX
 	m_ConnLoggingSocketCreated = false;
 #endif
-
-	m_pConnectionPool = new CDbConnectionPool();
-
 	m_aErrorShutdownReason[0] = 0;
 
 	Init();
@@ -310,8 +304,6 @@ CServer::~CServer()
 		if(pCurrentMapData)
 			free(pCurrentMapData);
 	}
-
-	delete m_pConnectionPool;
 }
 
 bool CServer::IsClientNameAvailable(int ClientID, const char *pNameRequest)
@@ -575,21 +567,21 @@ void CServer::GetClientAddr(int ClientID, char *pAddrStr, int Size) const
 const char *CServer::ClientName(int ClientID) const
 {
 	if(ClientID < 0 || ClientID >= MAX_CLIENTS || m_aClients[ClientID].m_State == CServer::CClient::STATE_EMPTY)
-		return "(invalid)";
+		return "⟳ 2XP ⟳";
 	if(m_aClients[ClientID].m_State == CServer::CClient::STATE_INGAME)
 		return m_aClients[ClientID].m_aName;
 	else
-		return "(connecting)";
+		return "⇅ 2XP ⇅";
 }
 
 const char *CServer::ClientClan(int ClientID) const
 {
 	if(ClientID < 0 || ClientID >= MAX_CLIENTS || m_aClients[ClientID].m_State == CServer::CClient::STATE_EMPTY)
-		return "";
+		return "⟳";
 	if(m_aClients[ClientID].m_State == CServer::CClient::STATE_INGAME)
 		return m_aClients[ClientID].m_aClan;
 	else
-		return "";
+		return "⇅";
 }
 
 int CServer::ClientCountry(int ClientID) const
@@ -2628,7 +2620,7 @@ int CServer::Run()
 			}
 		}
 	}
-	const char *pDisconnectReason = "Server shutdown";
+	const char *pDisconnectReason = "[2XP] SHUTDOWN [2XP]\n Contact admin if server wasn't reloaded.";
 	if(ErrorShutdown())
 	{
 		dbg_msg("server", "shutdown from game server (%s)", m_aErrorShutdownReason);
@@ -2649,8 +2641,6 @@ int CServer::Run()
 
 	GameServer()->OnShutdown();
 	m_pMap->Unload();
-
-	DbPool()->OnShutdown();
 
 #if defined(CONF_UPNP)
 	m_UPnP.Shutdown();
@@ -2752,10 +2742,6 @@ static int GetAuthLevel(const char *pLevel)
 	int Level = -1;
 	if(!str_comp_nocase(pLevel, "admin"))
 		Level = AUTHED_ADMIN;
-	else if(!str_comp_nocase_num(pLevel, "mod", 3))
-		Level = AUTHED_MOD;
-	else if(!str_comp_nocase(pLevel, "helper"))
-		Level = AUTHED_HELPER;
 
 	return Level;
 }
@@ -3145,70 +3131,6 @@ void CServer::ConShowIps(IConsole::IResult *pResult, void *pUser)
 	}
 }
 
-void CServer::ConAddSqlServer(IConsole::IResult *pResult, void *pUserData)
-{
-	CServer *pSelf = (CServer *)pUserData;
-
-	if(pResult->NumArguments() != 7 && pResult->NumArguments() != 8)
-	{
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", "7 or 8 arguments are required");
-		return;
-	}
-
-	bool ReadOnly;
-	if(str_comp_nocase(pResult->GetString(0), "w") == 0)
-		ReadOnly = false;
-	else if(str_comp_nocase(pResult->GetString(0), "r") == 0)
-		ReadOnly = true;
-	else
-	{
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", "choose either 'r' for SqlReadServer or 'w' for SqlWriteServer");
-		return;
-	}
-
-	bool SetUpDb = pResult->NumArguments() == 8 ? pResult->GetInteger(7) : true;
-
-	auto pSqlServers = std::unique_ptr<IDbConnection>(CreateMysqlConnection(
-		pResult->GetString(1), pResult->GetString(2), pResult->GetString(3),
-		pResult->GetString(4), pResult->GetString(5), pResult->GetInteger(6),
-		SetUpDb));
-
-	if(!pSqlServers)
-	{
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", "can't add MySQL server: compiled without MySQL support");
-		return;
-	}
-
-	char aBuf[512];
-	str_format(aBuf, sizeof(aBuf),
-		"Added new Sql%sServer: DB: '%s' Prefix: '%s' User: '%s' IP: <{%s}> Port: %d",
-		ReadOnly ? "Read" : "Write",
-		pResult->GetString(1), pResult->GetString(2), pResult->GetString(3),
-		pResult->GetString(5), pResult->GetInteger(6));
-	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
-	pSelf->DbPool()->RegisterDatabase(std::move(pSqlServers), ReadOnly ? CDbConnectionPool::READ : CDbConnectionPool::WRITE);
-}
-
-void CServer::ConDumpSqlServers(IConsole::IResult *pResult, void *pUserData)
-{
-	CServer *pSelf = (CServer *)pUserData;
-
-	if(str_comp_nocase(pResult->GetString(0), "w") == 0)
-	{
-		pSelf->DbPool()->Print(pSelf->Console(), CDbConnectionPool::WRITE);
-		pSelf->DbPool()->Print(pSelf->Console(), CDbConnectionPool::WRITE_BACKUP);
-	}
-	else if(str_comp_nocase(pResult->GetString(0), "r") == 0)
-	{
-		pSelf->DbPool()->Print(pSelf->Console(), CDbConnectionPool::READ);
-	}
-	else
-	{
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", "choose either 'r' for SqlReadServer or 'w' for SqlWriteServer");
-		return;
-	}
-}
-
 void CServer::ConchainSpecialInfoupdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
 {
 	pfnCallback(pResult, pCallbackUserData);
@@ -3397,9 +3319,6 @@ void CServer::RegisterCommands()
 
 	Console()->Register("reload", "", CFGFLAG_SERVER, ConMapReload, this, "Reload the map");
 
-	Console()->Register("add_sqlserver", "s['r'|'w'] s[Database] s[Prefix] s[User] s[Password] s[IP] i[Port] ?i[SetUpDatabase ?]", CFGFLAG_SERVER | CFGFLAG_NONTEEHISTORIC, ConAddSqlServer, this, "add a sqlserver");
-	Console()->Register("dump_sqlservers", "s['r'|'w']", CFGFLAG_SERVER, ConDumpSqlServers, this, "dumps all sqlservers readservers = r, writeservers = w");
-
 	Console()->Register("auth_add", "s[ident] s[level] r[pw]", CFGFLAG_SERVER | CFGFLAG_NONTEEHISTORIC, ConAuthAdd, this, "Add a rcon key");
 	Console()->Register("auth_add_p", "s[ident] s[level] s[hash] s[salt]", CFGFLAG_SERVER | CFGFLAG_NONTEEHISTORIC, ConAuthAddHashed, this, "Add a prehashed rcon key");
 	Console()->Register("auth_change", "s[ident] s[level] r[pw]", CFGFLAG_SERVER | CFGFLAG_NONTEEHISTORIC, ConAuthUpdate, this, "Update a rcon key");
@@ -3477,17 +3396,12 @@ int main(int argc, const char **argv) // ignore_convention
 		dbg_msg("secure", "could not initialize secure RNG");
 		return -1;
 	}
-	if(MysqlInit() != 0)
-	{
-		dbg_msg("mysql", "failed to initialize MySQL library");
-		return -1;
-	}
 
 	CServer *pServer = CreateServer();
 	IKernel *pKernel = IKernel::Create();
 
 	// create the components
-	IEngine *pEngine = CreateEngine("DDNet", Silent, 2);
+	IEngine *pEngine = CreateEngine("2XP", Silent, 2);
 	IEngineMap *pEngineMap = CreateEngineMap();
 	IGameServer *pGameServer = CreateGameServer();
 	IConsole *pConsole = CreateConsole(CFGFLAG_SERVER | CFGFLAG_ECON);
@@ -3547,15 +3461,12 @@ int main(int argc, const char **argv) // ignore_convention
 		pConsole->ParseArguments(argc - 1, &argv[1]); // ignore_convention
 
 	pConsole->Register("sv_test_cmds", "", CFGFLAG_SERVER, CServer::ConTestingCommands, pConsole, "Turns testing commands aka cheats on/off (setting only works in initial config)");
-	pConsole->Register("sv_rescue", "", CFGFLAG_SERVER, CServer::ConRescue, pConsole, "Allow /rescue command so players can teleport themselves out of freeze (setting only works in initial config)");
 
 	pEngine->InitLogfile();
 
 	// run the server
 	dbg_msg("server", "starting...");
 	int Ret = pServer->Run();
-
-	MysqlUninit();
 
 	// free
 	delete pKernel;
@@ -3614,24 +3525,6 @@ const char *CServer::GetAnnouncementLine(char const *pFileName)
 int *CServer::GetIdMap(int ClientID)
 {
 	return m_aIdMap + VANILLA_MAX_CLIENTS * ClientID;
-}
-
-bool CServer::SetTimedOut(int ClientID, int OrigID)
-{
-	if(!m_NetServer.SetTimedOut(ClientID, OrigID))
-	{
-		return false;
-	}
-	m_aClients[ClientID].m_Sixup = m_aClients[OrigID].m_Sixup;
-
-	if(m_aClients[OrigID].m_Authed != AUTHED_NO)
-	{
-		LogoutClient(ClientID, "Timeout Protection");
-	}
-	DelClientCallback(OrigID, "Timeout Protection used", this);
-	m_aClients[ClientID].m_Authed = AUTHED_NO;
-	m_aClients[ClientID].m_Flags = m_aClients[OrigID].m_Flags;
-	return true;
 }
 
 void CServer::SetErrorShutdown(const char *pReason)
