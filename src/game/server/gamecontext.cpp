@@ -2826,9 +2826,6 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 		g_Config.m_SvHit = 1;
 		g_Config.m_SvEndlessDrag = 0;
 		g_Config.m_SvOldLaser = 0;
-		g_Config.m_SvOldTeleportHook = 0;
-		g_Config.m_SvOldTeleportWeapons = 0;
-		g_Config.m_SvTeleportHoldHook = 0;
 		g_Config.m_SvTeam = 1;
 		g_Config.m_SvShowOthersDefault = 0;
 
@@ -2840,21 +2837,6 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 	Console()->ExecuteFile(g_Config.m_SvResetFile, -1);
 
 	LoadMapSettings();
-
-	if(g_Config.m_SvSoloServer)
-	{
-		g_Config.m_SvTeam = 3;
-		g_Config.m_SvShowOthersDefault = 1;
-
-		Tuning()->Set("player_collision", 0);
-		Tuning()->Set("player_hooking", 0);
-
-		for(int i = 0; i < NUM_TUNEZONES; i++)
-		{
-			TuningList()[i].Set("player_collision", 0);
-			TuningList()[i].Set("player_hooking", 0);
-		}
-	}
 
 	m_pController = new CGameControllerDDRace(this);
 

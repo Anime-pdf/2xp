@@ -6,10 +6,8 @@
 #include <base/detect.h>
 #include <engine/config.h>
 
-#define CONFIG_FILE "settings_ddnet.cfg"
-#define AUTOEXEC_FILE "autoexec.cfg"
-#define AUTOEXEC_CLIENT_FILE "autoexec_client.cfg"
-#define AUTOEXEC_SERVER_FILE "autoexec_server.cfg"
+#define CONFIG_FILE "settings_2xp.cfg"
+#define AUTOEXEC_SERVER_FILE "autoexec_2xp.cfg"
 
 class CConfig
 {

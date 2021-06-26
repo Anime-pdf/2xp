@@ -464,6 +464,7 @@ void IGameController::StartRound()
 void IGameController::ChangeMap(const char *pToMap)
 {
 	str_copy(g_Config.m_SvMap, pToMap, sizeof(g_Config.m_SvMap));
+	GameServer()->OnMapChange(g_Config.m_SvMap, sizeof(g_Config.m_SvMap));
 }
 
 void IGameController::OnReset()

@@ -800,21 +800,6 @@ void CNetServer::SetMaxClientsPerIP(int Max)
 	m_MaxClientsPerIP = Max;
 }
 
-bool CNetServer::SetTimedOut(int ClientID, int OrigID)
-{
-	if(m_aSlots[ClientID].m_Connection.State() != NET_CONNSTATE_ERROR)
-		return false;
-
-	m_aSlots[ClientID].m_Connection.SetTimedOut(ClientAddr(OrigID), m_aSlots[OrigID].m_Connection.SeqSequence(), m_aSlots[OrigID].m_Connection.AckSequence(), m_aSlots[OrigID].m_Connection.SecurityToken(), m_aSlots[OrigID].m_Connection.ResendBuffer(), m_aSlots[OrigID].m_Connection.m_Sixup);
-	m_aSlots[OrigID].m_Connection.Reset();
-	return true;
-}
-
-void CNetServer::SetTimeoutProtected(int ClientID)
-{
-	m_aSlots[ClientID].m_Connection.m_TimeoutProtected = true;
-}
-
 int CNetServer::ResetErrorString(int ClientID)
 {
 	m_aSlots[ClientID].m_Connection.ResetErrorString();

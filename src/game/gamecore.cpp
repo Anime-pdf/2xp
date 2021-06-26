@@ -63,7 +63,7 @@ void CCharacterCore::Init(CWorldCore *pWorld, CCollision *pCollision, std::map<i
 	m_pTeleOuts = pTeleOuts;
 
 	// fail safe, if core's tuning didn't get updated at all, just fallback to world tuning.
-	m_Tuning = m_pWorld->m_Tuning[g_Config.m_ClDummy];
+	m_Tuning = m_pWorld->m_Tuning[0];
 	Reset();
 }
 

@@ -334,10 +334,6 @@ void CCharacter::FireWeapon()
 	if(m_FrozenLastTick)
 		FullAuto = true;
 
-	// don't fire hammer when player is deep and sv_deepfly is disabled
-	if(!g_Config.m_SvDeepfly && m_Core.m_ActiveWeapon == WEAPON_HAMMER && m_DeepFreeze)
-		return;
-
 	// check if we gonna fire
 	bool WillFire = false;
 	if(CountInput(m_LatestPrevInput.m_Fire, m_LatestInput.m_Fire).m_Presses)
@@ -1700,18 +1696,12 @@ void CCharacter::HandleTiles(int Index)
 	}
 
 	int z = GameServer()->Collision()->IsTeleport(MapIndex);
-	if(!g_Config.m_SvOldTeleportHook && !g_Config.m_SvOldTeleportWeapons && z && (*m_pTeleOuts)[z - 1].size())
+	if(z && (*m_pTeleOuts)[z - 1].size())
 	{
 		if(m_Super)
 			return;
 		int TeleOut = m_Core.m_pWorld->RandomOr0((*m_pTeleOuts)[z - 1].size());
 		m_Core.m_Pos = (*m_pTeleOuts)[z - 1][TeleOut];
-		if(!g_Config.m_SvTeleportHoldHook)
-		{
-			ResetHook();
-		}
-		if(g_Config.m_SvTeleportLoseWeapons)
-			ResetPickups();
 		return;
 	}
 	int evilz = GameServer()->Collision()->IsEvilTeleport(MapIndex);
@@ -1721,20 +1711,7 @@ void CCharacter::HandleTiles(int Index)
 			return;
 		int TeleOut = m_Core.m_pWorld->RandomOr0((*m_pTeleOuts)[evilz - 1].size());
 		m_Core.m_Pos = (*m_pTeleOuts)[evilz - 1][TeleOut];
-		if(!g_Config.m_SvOldTeleportHook && !g_Config.m_SvOldTeleportWeapons)
-		{
-			m_Core.m_Vel = vec2(0, 0);
-
-			if(!g_Config.m_SvTeleportHoldHook)
-			{
-				ResetHook();
-				GameWorld()->ReleaseHooked(GetPlayer()->GetCID());
-			}
-			if(g_Config.m_SvTeleportLoseWeapons)
-			{
-				ResetPickups();
-			}
-		}
+		m_Core.m_Vel = vec2(0, 0);
 		return;
 	}
 }

@@ -314,13 +314,14 @@ function(is_bundled VARIABLE PATH)
   endif()
 endfunction()
 
+set(Boost_INCLUDES_DIRS)
 if(NOT CMAKE_CROSSCOMPILING)
   # Check for PkgConfig once so all the other `find_package` calls can do it
   # quietly.
   find_package(PkgConfig)
 endif()
 find_package(ZLIB)
-find_package(Crypto)
+find_package(OpenSSL)
 find_package(GTest)
 find_package(MySQL)
 find_package(PythonInterp 3)
@@ -342,12 +343,24 @@ if(UPNP)
   find_package(Miniupnpc)
 endif()
 
+if(TARGET_OS AND TARGET_OS STREQUAL "linux")
+  find_package(Boost 1.36.0)
+  if(NOT(Boost_FOUND))
+    message(FATAL_ERROR, "Boost need install.")
+  endif()
+endif()
+
+if(NOT(Boost_INCLUDES_DIRS))
+  set(Boost_INCLUDE_DIRS "libs/boost/include")
+endif()
+
 message(STATUS "******** ${SERVER_EXECUTABLE} ********")
 message(STATUS "Target OS: ${TARGET_OS} ${TARGET_BITS}bit")
 message(STATUS "Compiler: ${CMAKE_CXX_COMPILER}")
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 message(STATUS "Dependencies:")
+
 function(show_dependency_status OUTPUT_NAME NAME)
   if(${NAME}_FOUND)
     if(${NAME}_BUNDLED)
@@ -500,6 +513,8 @@ endif()
 
 set(COPY_FILES
   ${WEBSOCKETS_COPY_FILES}
+  ${MYSQL_COPY_FILES}
+  ${OPENSSL_COPY_FILES}
 )
 file(COPY ${COPY_FILES} DESTINATION .)
 
@@ -731,6 +746,7 @@ add_executable(${TARGET_SERVER}
   $<TARGET_OBJECTS:engine-shared>
   $<TARGET_OBJECTS:game-shared>
 )
+
 target_link_libraries(${TARGET_SERVER} ${LIBS_SERVER})
 list(APPEND TARGETS_OWN ${TARGET_SERVER})
 list(APPEND TARGETS_LINK ${TARGET_SERVER})
@@ -1101,6 +1117,7 @@ foreach(target ${TARGETS_OWN})
     target_compile_definitions(${target} PRIVATE CONF_ANTIBOT)
   endif()
   target_compile_definitions(${target} PRIVATE CONF_SQL)
+  target_include_directories(${target} PRIVATE ${Boost_INCLUDE_DIRS})
   target_include_directories(${target} PRIVATE ${MYSQL_INCLUDE_DIRS})
   if(VERSION)
     target_compile_definitions(${target} PRIVATE GAME_RELEASE_VERSION="${VERSION}")

@@ -462,33 +462,3 @@ int CNetConnection::Update()
 
 	return 0;
 }
-
-void CNetConnection::SetTimedOut(const NETADDR *pAddr, int Sequence, int Ack, SECURITY_TOKEN SecurityToken, CStaticRingBuffer<CNetChunkResend, NET_CONN_BUFFERSIZE> *pResendBuffer, bool Sixup)
-{
-	int64 Now = time_get();
-
-	m_Sequence = Sequence;
-	m_Ack = Ack;
-	m_RemoteClosed = 0;
-
-	m_State = NET_CONNSTATE_ONLINE;
-	m_PeerAddr = *pAddr;
-	mem_zero(m_aErrorString, sizeof(m_aErrorString));
-	m_LastSendTime = Now;
-	m_LastRecvTime = Now;
-	m_LastUpdateTime = Now;
-	m_SecurityToken = SecurityToken;
-	m_Sixup = Sixup;
-
-	// copy resend buffer
-	m_Buffer.Init();
-	while(pResendBuffer->First())
-	{
-		CNetChunkResend *pFirst = pResendBuffer->First();
-
-		CNetChunkResend *pResend = m_Buffer.Allocate(sizeof(CNetChunkResend) + pFirst->m_DataSize);
-		mem_copy(pResend, pFirst, sizeof(CNetChunkResend) + pFirst->m_DataSize);
-
-		pResendBuffer->PopFirst();
-	}
-}
