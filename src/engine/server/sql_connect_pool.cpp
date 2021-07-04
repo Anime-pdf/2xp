@@ -495,7 +495,7 @@ void CConnectionPool::SPS(const char *Q, int AN, SSqlArg *A)
 			}
 			case SQL_TYPE_INT:
 			{
-				ps->setInt(index + 1, (int)((A + index)->Get()));
+				ps->setInt(index + 1, (int)((size_t)(A + index)->Get())); // warning C4311: 'type cast': pointer truncation from 'void *' to 'int'
 				break;
 			}
 			default:
