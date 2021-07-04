@@ -8,12 +8,6 @@
 #include "sql_connect_pool.h"
 
 /*
-	I don't see the point in using SELECT operations in the thread, 
-	since this will lead to unnecessary code, which may cause confusion, 
-	and by calculations if (SQL server / server) = localhost, 
-	this will not do any harm (but after the release is complete, 
-	it is advisable to use the Thread function with Callback)
-
 	And in General, you should review the SQL system, 
 	it works (and has been tested by time and tests), 
 	but this implementation is not very narrowly focused
@@ -28,7 +22,7 @@
 	 Usage is performed in turn following synchronously 
 	 working running through each request in order
 
-	 This pool is not asynchronous
+	 @kurosio
 */
 // sql pool connections mutex
 std::mutex SqlConnectionLock;
@@ -38,8 +32,8 @@ std::recursive_mutex SqlThreadRecursiveLock;
 // #####################################################
 // SQL CONNECTION POOL
 // #####################################################
-std::shared_ptr<CConectionPool> CConectionPool::m_Instance;
-CConectionPool::CConectionPool()
+std::shared_ptr<CConnectionPool> CConnectionPool::m_Instance;
+CConnectionPool::CConnectionPool()
 {
 	try
 	{
@@ -54,24 +48,24 @@ CConectionPool::CConectionPool()
 	}
 	catch(SQLException &e) 
 	{ 
-		dbg_msg("Sql Exception", "%s", e.what());
+		dbg_msg("sql", "%s", e.what());
 		exit(0);
 	}
 }
 
-CConectionPool::~CConectionPool()
+CConnectionPool::~CConnectionPool()
 {
 	DisconnectConnectionHeap();
 }
 
-CConectionPool& CConectionPool::GetInstance()
+CConnectionPool& CConnectionPool::GetInstance()
 {
 	if (m_Instance.get() == nullptr)
-		m_Instance.reset(new CConectionPool());
+		m_Instance.reset(new CConnectionPool());
 	return *m_Instance.get();
 }
 
-Connection* CConectionPool::CreateConnection()
+Connection* CConnectionPool::CreateConnection()
 {
 	Connection *pConnection = nullptr;
 	while(pConnection == nullptr)
@@ -84,7 +78,7 @@ Connection* CConectionPool::CreateConnection()
 		}
 		catch(SQLException &e) 
 		{
-			dbg_msg("Sql Exception", "%s", e.what());
+			dbg_msg("sql", "%s", e.what());
 			DisconnectConnection(pConnection);
 		}
 	}
@@ -92,7 +86,7 @@ Connection* CConectionPool::CreateConnection()
 	return pConnection;
 }
 
-Connection* CConectionPool::GetConnection()
+Connection* CConnectionPool::GetConnection()
 {
 	SqlConnectionLock.lock();
 
@@ -118,7 +112,7 @@ Connection* CConectionPool::GetConnection()
 	return pConnection;
 }
 
-void CConectionPool::ReleaseConnection(Connection* pConnection)
+void CConnectionPool::ReleaseConnection(Connection* pConnection)
 {
 	SqlConnectionLock.lock();
 
@@ -130,7 +124,7 @@ void CConectionPool::ReleaseConnection(Connection* pConnection)
 	SqlConnectionLock.unlock();
 }
 
-void CConectionPool::DisconnectConnection(Connection* pConnection)
+void CConnectionPool::DisconnectConnection(Connection* pConnection)
 {
 	if(pConnection)
 	{
@@ -140,7 +134,7 @@ void CConectionPool::DisconnectConnection(Connection* pConnection)
 		}
 		catch(SQLException& e)
 		{
-			dbg_msg("Sql Exception", "%s", e.what());
+			dbg_msg("sql", "%s", e.what());
 		}
 	}
 	m_ConnList.remove(pConnection);
@@ -148,7 +142,7 @@ void CConectionPool::DisconnectConnection(Connection* pConnection)
 	pConnection = nullptr;
 }
 
-void CConectionPool::DisconnectConnectionHeap()
+void CConnectionPool::DisconnectConnectionHeap()
 {
 	SqlConnectionLock.lock();
 
@@ -163,7 +157,7 @@ void CConectionPool::DisconnectConnectionHeap()
 // #####################################################
 // INSERT SQL
 // #####################################################
-void CConectionPool::ID(const char *Table, const char *Buffer, ...)
+void CConnectionPool::ID(const char *Table, const char *Buffer, ...)
 {
 	va_list Arguments;
 	va_start(Arguments, Buffer);
@@ -171,7 +165,7 @@ void CConectionPool::ID(const char *Table, const char *Buffer, ...)
 	va_end(Arguments);
 }
 
-void CConectionPool::IDS(int Milliseconds, const char *Table, const char *Buffer, ...)
+void CConnectionPool::IDS(int Milliseconds, const char *Table, const char *Buffer, ...)
 {
 	va_list Arguments;
 	va_start(Arguments, Buffer);
@@ -179,7 +173,7 @@ void CConectionPool::IDS(int Milliseconds, const char *Table, const char *Buffer
 	va_end(Arguments);	
 }
 
-void CConectionPool::InsertFormated(int Milliseconds, const char *Table, const char *Buffer, va_list args)
+void CConnectionPool::InsertFormated(int Milliseconds, const char *Table, const char *Buffer, va_list args)
 {
 	char aBuf[1024];
 	#if defined(CONF_FAMILY_WINDOWS)
@@ -214,7 +208,7 @@ void CConectionPool::InsertFormated(int Milliseconds, const char *Table, const c
 		SqlThreadRecursiveLock.unlock();
 
 		if(pError != nullptr)
-			dbg_msg("SQL", "%s", pError);
+			dbg_msg("sql", "%s", pError);
 	});
 	Thread.detach();
 }
@@ -222,7 +216,7 @@ void CConectionPool::InsertFormated(int Milliseconds, const char *Table, const c
 // #####################################################
 // UPDATE SQL
 // #####################################################
-void CConectionPool::UD(const char *Table, const char *Buffer, ...)
+void CConnectionPool::UD(const char *Table, const char *Buffer, ...)
 {
 	va_list Arguments;
 	va_start(Arguments, Buffer);
@@ -230,7 +224,7 @@ void CConectionPool::UD(const char *Table, const char *Buffer, ...)
 	va_end(Arguments);
 }
 
-void CConectionPool::UDS(int Milliseconds, const char *Table, const char *Buffer, ...)
+void CConnectionPool::UDS(int Milliseconds, const char *Table, const char *Buffer, ...)
 {
 	va_list Arguments;
 	va_start(Arguments, Buffer);
@@ -238,7 +232,7 @@ void CConectionPool::UDS(int Milliseconds, const char *Table, const char *Buffer
 	va_end(Arguments);
 }
 
-void CConectionPool::UpdateFormated(int Milliseconds, const char *Table, const char *Buffer, va_list args)
+void CConnectionPool::UpdateFormated(int Milliseconds, const char *Table, const char *Buffer, va_list args)
 {
 	char aBuf[1024];
 	#if defined(CONF_FAMILY_WINDOWS)
@@ -273,7 +267,7 @@ void CConectionPool::UpdateFormated(int Milliseconds, const char *Table, const c
 		SqlThreadRecursiveLock.unlock();
 
 		if(pError != nullptr)
-			dbg_msg("SQL", "%s", pError);
+			dbg_msg("sql", "%s", pError);
 	});
 	Thread.detach();
 }
@@ -281,7 +275,7 @@ void CConectionPool::UpdateFormated(int Milliseconds, const char *Table, const c
 // #####################################################
 // DELETE SQL
 // #####################################################
-void CConectionPool::DD(const char *Table, const char *Buffer, ...)
+void CConnectionPool::DD(const char *Table, const char *Buffer, ...)
 {
 	va_list Arguments;
 	va_start(Arguments, Buffer);
@@ -289,7 +283,7 @@ void CConectionPool::DD(const char *Table, const char *Buffer, ...)
 	va_end(Arguments);
 }
 
-void CConectionPool::DDS(int Milliseconds, const char *Table, const char *Buffer, ...)
+void CConnectionPool::DDS(int Milliseconds, const char *Table, const char *Buffer, ...)
 {
 	va_list Arguments;
 	va_start(Arguments, Buffer);
@@ -297,7 +291,7 @@ void CConectionPool::DDS(int Milliseconds, const char *Table, const char *Buffer
 	va_end(Arguments);
 }
 
-void CConectionPool::DeleteFormated(int Milliseconds, const char *Table, const char *Buffer, va_list args)
+void CConnectionPool::DeleteFormated(int Milliseconds, const char *Table, const char *Buffer, va_list args)
 {
 	char aBuf[256];
 	#if defined(CONF_FAMILY_WINDOWS)
@@ -332,15 +326,23 @@ void CConectionPool::DeleteFormated(int Milliseconds, const char *Table, const c
 		SqlThreadRecursiveLock.unlock();
 
 		if(pError != nullptr)
-			dbg_msg("SQL", "%s", pError);
+			dbg_msg("sql", "%s", pError);
 	});
 	Thread.detach();
 }
 
+/*
+	I don't see the point in using SELECT operations in the thread, 
+	since this will lead to unnecessary code, which may cause confusion, 
+	and by calculations if (SQL server / server) = localhost, 
+	this will not do any harm (but after the release is complete, 
+	it is advisable to use the Thread function with Callback)
+*/
+
 // #####################################################
 // SELECT SQL
 // #####################################################
-ResultPtr CConectionPool::SD(const char* Select, const char* Table, const char* Buffer, ...)
+ResultPtr CConnectionPool::SSD(const char* Select, const char* Table, const char* Buffer, ...)
 {
 	char aBuf[1024];
 	va_list VarArgs;
@@ -375,12 +377,12 @@ ResultPtr CConectionPool::SD(const char* Select, const char* Table, const char* 
 	SqlThreadRecursiveLock.unlock();
 
 	if(pError != nullptr)
-		dbg_msg("SQL", "%s", pError);
+		dbg_msg("sql", "%s", pError);
 
 	return pResult;
 }
 
-void CConectionPool::SDT(const char* Select, const char* Table, std::function<void(ResultPtr)> func, const char* Buffer, ...)
+void CConnectionPool::ASD(std::function<void(ResultPtr)> func, const char *Select, const char *Table, const char *Buffer, ...)
 {
 	char aBuf[1024];
 	va_list VarArgs;
@@ -415,7 +417,106 @@ void CConectionPool::SDT(const char* Select, const char* Table, std::function<vo
 		SqlThreadRecursiveLock.unlock();
 
 		if(pError != nullptr)
-			dbg_msg("SQL", "%s", pError);
+			dbg_msg("sql", "%s", pError);
 	});
 	Thread.detach();
+}
+
+void CConnectionPool::ASDS(int Milliseconds, std::function<void(ResultPtr)> func, const char *Select, const char *Table, const char *Buffer, ...)
+{
+	char aBuf[1024];
+	va_list VarArgs;
+	va_start(VarArgs, Buffer);
+#if defined(CONF_FAMILY_WINDOWS)
+	_vsnprintf(aBuf, sizeof(aBuf), Buffer, VarArgs);
+#else
+	vsnprintf(aBuf, sizeof(aBuf), Buffer, VarArgs);
+#endif
+	va_end(VarArgs);
+	aBuf[sizeof(aBuf) - 1] = '\0';
+	const std::string Query("SELECT " + std::string(Select) + " FROM " + std::string(Table) + " " + std::string(aBuf) + ";");
+	std::thread Thread([this, Query, Milliseconds, func]() {
+		if(Milliseconds > 0)
+			std::this_thread::sleep_for(std::chrono::milliseconds(Milliseconds));
+
+		const char *pError = nullptr;
+
+		SqlThreadRecursiveLock.lock();
+		m_pDriver->threadInit();
+		Connection *pConnection = SJK.GetConnection();
+		try
+		{
+			std::unique_ptr<Statement> pStmt(pConnection->createStatement());
+			ResultPtr pResult(pStmt->executeQuery(Query.c_str()));
+			func(std::move(pResult));
+		}
+		catch(SQLException &e)
+		{
+			pError = e.what();
+		}
+		SJK.ReleaseConnection(pConnection);
+		m_pDriver->threadEnd();
+		SqlThreadRecursiveLock.unlock();
+
+		if(pError != nullptr)
+			dbg_msg("sql", "%s", pError);
+	});
+	Thread.detach();
+}
+
+void CConnectionPool::SPS(const char *Q, int AN, SSqlArg *A)
+{
+	const char *pError = nullptr;
+
+	SqlThreadRecursiveLock.lock();
+	m_pDriver->threadInit();
+	Connection *pConnection = SJK.GetConnection();
+	ResultPtr pResult = nullptr;
+	PreparedStatement* ps;
+	
+	try
+	{
+		ps = pConnection->prepareStatement(Q);
+		for(int index = 0; index < AN; ++index)
+		{
+			switch((A + index)->Type())
+			{
+			case SQL_TYPE_STRING:
+			{
+				ps->setString(index + 1, (const char *)(((SSqlString *)(A + index))->Get()));
+				dbg_msg("sql", "here str");
+				break;
+			}
+			case SQL_TYPE_BLOB:
+			{
+				ps->setBlob(index + 1, (std::istream *)((SSqlBlob *)(A + index)->Get()));
+				dbg_msg("sql", "here blob");
+				break;
+			}
+			case SQL_TYPE_INT:
+			{
+				ps->setInt(index + 1, (int)((A + index)->Get()));
+				break;
+			}
+			default:
+				dbg_msg("sql", "here ????");
+				break;
+			}
+		}
+
+		ps->execute();
+
+		delete ps;
+	}
+	catch(SQLException &e)
+	{
+		pError = e.what();
+	}
+
+	SJK.ReleaseConnection(pConnection);
+	m_pDriver->threadEnd();
+	SqlThreadRecursiveLock.unlock();
+
+	if(pError != nullptr)
+		dbg_msg("sql", "%s", pError);
 }

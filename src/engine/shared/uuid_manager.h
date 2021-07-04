@@ -3,6 +3,7 @@
 
 #include <base/tl/array.h>
 #include <base/tl/sorted_array.h>
+#include <istream>
 
 enum
 {
@@ -29,6 +30,8 @@ CUuid CalculateUuid(const char *pName);
 void FormatUuid(CUuid Uuid, char *pBuffer, unsigned BufferLength);
 // Returns nonzero on failure.
 int ParseUuid(CUuid *pUuid, const char *pBuffer);
+
+int ParseUuid(CUuid *pUuid, std::istream *pStream);
 
 struct CName
 {

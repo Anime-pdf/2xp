@@ -6,6 +6,8 @@
 #include <game/server/gamemodes/2xp.h>
 #include <game/version.h>
 
+#include <game/server/database/account.h>
+
 #include "entities/character.h"
 #include "player.h"
 
@@ -337,6 +339,74 @@ void CGameContext::ConNinjaJetpack(IConsole::IResult *pResult, void *pUserData)
 		pPlayer->m_NinjaJetpack = pResult->GetInteger(0);
 	else
 		pPlayer->m_NinjaJetpack = !pPlayer->m_NinjaJetpack;
+}
+
+void CGameContext::ConPlayerLogin(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameContext *pSelf = (CGameContext *)pUserData;
+	if(!CheckClientID(pResult->m_ClientID))
+		return;
+
+	CPlayer *pPlayer = pSelf->m_apPlayers[pResult->m_ClientID];
+	if(!pPlayer)
+		return;
+
+	int State = CAccount::SUCCESS;
+
+	pPlayer->SetAccount(CAccount::Login(pResult->GetString(0), pResult->GetString(1), State));
+
+	switch(State)
+	{
+	case CAccount::SUCCESS:
+		pSelf->SendChatTarget(pResult->m_ClientID, "Logged in successful");
+		break;
+	case CAccount::UNKNOWN_LOGIN:
+		pSelf->SendChatTarget(pResult->m_ClientID, "There is no such login in database");
+		break;
+	case CAccount::WRONG_PASSWORD:
+		pSelf->SendChatTarget(pResult->m_ClientID, "Wrong password");
+		break;
+	case CAccount::ALREADY_LOGIN:
+		pSelf->SendChatTarget(pResult->m_ClientID, "Account is already used");
+		break;
+	}
+}
+
+void CGameContext::ConPlayerRegister(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameContext *pSelf = (CGameContext *)pUserData;
+	if(!CheckClientID(pResult->m_ClientID))
+		return;
+
+	const int LoginLength = str_length(pResult->GetString(0));
+	const int PasswordLength = str_length(pResult->GetString(1));
+	if(LoginLength > 32 || LoginLength < 4 ||
+		   PasswordLength > 32 || PasswordLength < 4)
+	{
+		pSelf->SendChatTarget(pResult->m_ClientID, "Login and password should contain 4-32 characters");
+		return;
+	}
+
+	CPlayer *pPlayer = pSelf->m_apPlayers[pResult->m_ClientID];
+	if(!pPlayer)
+		return;
+
+	int State = CAccount::SUCCESS;
+
+	pPlayer->SetAccount(CAccount::Register(pResult->GetString(0), pResult->GetString(1), State));
+
+	switch(State)
+	{
+	case CAccount::SUCCESS:
+		pSelf->SendChatTarget(pResult->m_ClientID, "Logged in successful");
+		break;
+	case CAccount::ALREADY_REGISTERED:
+		pSelf->SendChatTarget(pResult->m_ClientID, "Account is already registered");
+		break;
+	case CAccount::FAIL:
+		pSelf->SendChatTarget(pResult->m_ClientID, "Something goes wrong. Ask administrator(s)");
+		break;
+	}
 }
 
 bool CheckClientID(int ClientID)

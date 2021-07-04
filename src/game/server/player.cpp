@@ -20,7 +20,7 @@ CPlayer::CPlayer(CGameContext *pGameServer, int ClientID, int Team)
 	m_ClientID = ClientID;
 	m_NumInputs = 0;
 	m_Team = Team;
-	m_GameTeam = IGameController::TXP_TEAM_H;
+	m_GameTeam = IGameController::TXP_TEAM_DIED;
 	Reset();
 	GameServer()->Antibot()->OnPlayerInit(m_ClientID);
 }

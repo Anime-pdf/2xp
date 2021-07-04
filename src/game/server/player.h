@@ -8,6 +8,7 @@
 #include "teeinfo.h"
 #include <game/generated/protocol.h>
 #include <game/server/entities/character.h>
+#include <game/server/database/account.h>
 
 enum
 {
@@ -51,6 +52,9 @@ public:
 
 	void KillCharacter(int Weapon = WEAPON_GAME);
 	CCharacter *GetCharacter();
+
+	CAccount *GetAccount() const { return m_pAccount; }
+	void SetAccount(CAccount *pNewAccount) { m_pAccount = pNewAccount; }
 
 	void SpectatePlayerName(const char *pName);
 
@@ -117,6 +121,7 @@ public:
 
 private:
 	CCharacter *m_pCharacter;
+	CAccount *m_pAccount;
 	int m_NumInputs;
 	CGameContext *m_pGameServer;
 

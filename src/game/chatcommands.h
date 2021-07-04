@@ -23,4 +23,7 @@ CHAT_COMMAND("pause", "?r[player name]", CFGFLAG_CHAT | CFGFLAG_SERVER, ConToggl
 CHAT_COMMAND("spec", "?r[player name]", CFGFLAG_CHAT | CFGFLAG_SERVER, ConToggleSpec, this, "Toggles spec (if not available behaves as /pause)")
 CHAT_COMMAND("ninjajetpack", "?i['0'|'1']", CFGFLAG_CHAT | CFGFLAG_SERVER, ConNinjaJetpack, this, "Whether to use ninja jetpack or not. Makes jetpack look more awesome")
 
+CHAT_COMMAND("login", "s[login] s[password]", CFGFLAG_CHAT | CFGFLAG_SERVER, ConPlayerLogin, this, "Tries to login current player")
+CHAT_COMMAND("register", "s[login] s[password]", CFGFLAG_CHAT | CFGFLAG_SERVER, ConPlayerRegister, this, "Tries to register current player")
+
 #undef CHAT_COMMAND

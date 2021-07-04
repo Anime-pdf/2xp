@@ -343,6 +343,9 @@ private:
 	static void ConFreezeHammer(IConsole::IResult *pResult, void *pUserData);
 	static void ConUnFreezeHammer(IConsole::IResult *pResult, void *pUserData);
 
+	static void ConPlayerLogin(IConsole::IResult *pResult, void *pUserData);
+	static void ConPlayerRegister(IConsole::IResult *pResult, void *pUserData);
+
 	enum
 	{
 		MAX_MUTES = 32,

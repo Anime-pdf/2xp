@@ -4,6 +4,8 @@
 #include <engine/shared/packer.h>
 
 #include <stdio.h>
+#include <string>
+#include <iterator>
 
 static const CUuid TEEWORLDS_NAMESPACE = {{// "e05ddaaa-c4e6-4cfb-b642-5d48e80c0029"
 	0xe0, 0x5d, 0xda, 0xaa, 0xc4, 0xe6, 0x4c, 0xfb,
@@ -76,6 +78,15 @@ int ParseUuid(CUuid *pUuid, const char *pBuffer)
 	{
 		return 1;
 	}
+	return 0;
+}
+
+int ParseUuid(CUuid *pUuid, std::istream *pStream)
+{
+	std::string Id((std::istreambuf_iterator<char>(*pStream)), (std::istreambuf_iterator<char>()));
+	const char *pId = Id.c_str();
+	std::copy(pId, pId + 16, pUuid->m_aData);
+
 	return 0;
 }
 
