@@ -34,13 +34,13 @@ find_path(OWN_MYSQL_CPPCONN_INCLUDEDIR
 
 #######################################
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(MYSQL DEFAULT_MSG OWN_MYSQL_LIBRARY OWN_MYSQL_INCLUDEDIR)
+find_package_handle_standard_args(MySQL DEFAULT_MSG OWN_MYSQL_LIBRARY OWN_MYSQL_INCLUDEDIR)
 
 mark_as_advanced(OWN_MYSQL_LIBRARY OWN_MYSQL_INCLUDEDIR)
 
 #######################################
 if(NOT(MYSQL_FOUND))
-  # [some data may not match dependencies / TODO: later fix it
+  # [some data may not match dependencies / TODO: later fix it]
   set(CMAKE_MODULE_PATH ${ORIGINAL_CMAKE_MODULE_PATH})
   find_package(MYSQL)
   set(CMAKE_MODULE_PATH ${OWN_CMAKE_MODULE_PATH})
