@@ -261,7 +261,7 @@ void CCharacterCore::Tick(bool UseInput)
 			for(int i = 0; i < MAX_CLIENTS; i++)
 			{
 				CCharacterCore *pCharCore = m_pWorld->m_apCharacters[i];
-				if(!pCharCore || pCharCore == this || (!(m_Super || pCharCore->m_Super) || pCharCore->m_Solo || m_Solo))
+				if(!pCharCore || pCharCore == this)
 					continue;
 
 				vec2 ClosestPoint;

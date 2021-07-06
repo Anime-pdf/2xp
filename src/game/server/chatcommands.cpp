@@ -229,8 +229,7 @@ void CGameContext::ConWhisper(IConsole::IResult *pResult, void *pUserData)
 	// This will never be called
 }
 
-void CGameContext::ConSetEyeEmote(IConsole::IResult *pResult,
-	void *pUserData)
+void CGameContext::ConSetEyeEmote(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
 	if(!CheckClientID(pResult->m_ClientID))
@@ -407,6 +406,28 @@ void CGameContext::ConPlayerRegister(IConsole::IResult *pResult, void *pUserData
 		pSelf->SendChatTarget(pResult->m_ClientID, "Something goes wrong. Ask administrator(s)");
 		break;
 	}
+}
+
+void CGameContext::ConFormattedAccountData(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameContext *pSelf = (CGameContext *)pUserData;
+	if(!CheckClientID(pResult->m_ClientID))
+		return;
+
+	CPlayer *pPlayer = pSelf->m_apPlayers[pResult->m_ClientID];
+	if(!pPlayer)
+		return;
+
+	if (!pPlayer->GetAccount())
+	{
+		pSelf->SendChatTarget(pResult->m_ClientID, "You are not logged in");
+		return;
+	}
+
+	char aBuf[512];
+	pPlayer->GetAccount()->Format(aBuf, sizeof(aBuf));
+
+	pSelf->SendChatTarget(pResult->m_ClientID, aBuf);
 }
 
 bool CheckClientID(int ClientID)

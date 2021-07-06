@@ -5,7 +5,7 @@
 
 class CAccount
 {
-	CAccount(std::istream *Id, const char *Login);
+	CAccount(CUuid Id, const char *Login);
 	struct
 	{
 		CUuid Id;
@@ -24,6 +24,8 @@ public:
 
 	static CAccount *Login(const char *Login, const char *Password, int &State);
 	static CAccount *Register(const char *Login, const char *Password, int &State);
+
+	void Format(char *pBuffer, int BufferSize);
 };
 
 #endif 

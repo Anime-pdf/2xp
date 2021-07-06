@@ -21,9 +21,9 @@ std::string Hash(const char *pPassword, const char* pSalt)
 	return std::string(aHash);
 }
 
-CAccount::CAccount(std::istream *Id, const char *Login)
+CAccount::CAccount(CUuid Id, const char *Login)
 {
-	ParseUuid(&m_Self.Id, Id);
+	m_Self.Id = Id;
 	m_Self.Login = std::string(Login);
 }
 
@@ -54,14 +54,12 @@ CAccount* CAccount::Login(const char *Login, const char *Password, int &State)
 			return 0;
 		} */
 
-		std::istream *IdStream = pRes->getBlob("id");
+		CUuid Uuid;
 
-		std::string Id((std::istreambuf_iterator<char>(*IdStream)), (std::istreambuf_iterator<char>()));
-
-		if(!Id.empty())
+		if (!ParseUuid(&Uuid, pRes->getBlob("id")))
 		{
 			State = SUCCESS;
-			return new CAccount(IdStream, pRes->getString("login").c_str());
+			return new CAccount(Uuid, pRes->getString("login").c_str());
 		}
 	}
 
@@ -114,16 +112,22 @@ CAccount *CAccount::Register(const char *Login, const char *Password, int &State
 		while(!pRes->next())
 			pRes = SJK.SSD("id", "accounts", "WHERE login = '%s'", ClearLogin);
 
-		std::istream *IdStream = pRes->getBlob("id");
+		CUuid Uuid;
 
-		std::string Id((std::istreambuf_iterator<char>(*IdStream)), (std::istreambuf_iterator<char>()));
-		if(!Id.empty())
+		if(!ParseUuid(&Uuid, pRes->getBlob("id")))
 		{
 			State = SUCCESS;
-			return new CAccount(IdStream, ClearLogin);
+			return new CAccount(Uuid, ClearLogin);
 		}
 	}
 
 	State = FAIL;
 	return 0;
+}
+
+void CAccount::Format(char *pBuffer, int BufferSize)
+{
+	char Id[UUID_MAXSTRSIZE];
+	FormatUuid(m_Self.Id, Id, sizeof(Id));
+	str_format(pBuffer, BufferSize, "%s %s", Id, m_Self.Login.c_str());
 }

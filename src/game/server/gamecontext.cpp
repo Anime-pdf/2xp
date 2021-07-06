@@ -1699,9 +1699,12 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 					Console()->ExecuteLine(pMsg->m_pMessage + 1, ClientID, false);
 					// m_apPlayers[ClientID] can be NULL, if the player used a
 					// timeout code and replaced another client.
-					char aBuf[256];
-					str_format(aBuf, sizeof(aBuf), "%d used %s", ClientID, pMsg->m_pMessage);
-					Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "chat-command", aBuf);
+					if (g_Config.m_Debug)
+					{
+						char aBuf[256];
+						str_format(aBuf, sizeof(aBuf), "%d used %s", ClientID, pMsg->m_pMessage);
+						Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "chat-command", aBuf);
+					}
 
 					Console()->SetAccessLevel(IConsole::ACCESS_LEVEL_ADMIN);
 					Console()->SetFlagMask(CFGFLAG_SERVER);

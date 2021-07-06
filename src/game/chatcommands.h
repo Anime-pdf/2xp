@@ -26,4 +26,6 @@ CHAT_COMMAND("ninjajetpack", "?i['0'|'1']", CFGFLAG_CHAT | CFGFLAG_SERVER, ConNi
 CHAT_COMMAND("login", "s[login] s[password]", CFGFLAG_CHAT | CFGFLAG_SERVER, ConPlayerLogin, this, "Tries to login current player")
 CHAT_COMMAND("register", "s[login] s[password]", CFGFLAG_CHAT | CFGFLAG_SERVER, ConPlayerRegister, this, "Tries to register current player")
 
+CHAT_COMMAND("accountinfo", "", CFGFLAG_CHAT | CFGFLAG_SERVER, ConFormattedAccountData, this, "Sends actual account data to player")
+
 #undef CHAT_COMMAND
