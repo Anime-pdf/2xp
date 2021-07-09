@@ -8,7 +8,6 @@
 #include <engine/server.h>
 
 #include <game/layers.h>
-#include <game/voting.h>
 
 #include <base/tl/array.h>
 #include <base/tl/string.h>
@@ -56,6 +55,7 @@ class IGameController;
 class IEngine;
 class IStorage;
 struct CAntibotData;
+class CVoteManager;
 
 class CGameContext : public IGameServer
 {
@@ -109,7 +109,6 @@ class CGameContext : public IGameServer
 
 	CGameContext(int Resetting);
 	void Construct(int Resetting);
-	void AddVote(const char *pDescription, const char *pCommand);
 	static int MapScan(const char *pName, int IsDir, int DirType, void *pUserData);
 
 	bool m_Resetting;
@@ -145,41 +144,13 @@ public:
 
 	// helper functions
 	class CCharacter *GetPlayerChar(int ClientID);
+	CPlayer *GetPlayer(int ClientID);
 
-	// voting
-	void StartVote(const char *pDesc, const char *pCommand, const char *pReason, const char *pSixupDesc);
-	void EndVote();
-	void SendVoteSet(int ClientID);
-	void SendVoteStatus(int ClientID, int Total, int Yes, int No);
-	void AbortVoteKickOnDisconnect(int ClientID);
-
-	int m_VoteCreator;
-	int m_VoteType;
-	int64 m_VoteCloseTime;
-	bool m_VoteUpdate;
-	int m_VotePos;
-	char m_aVoteDescription[VOTE_DESC_LENGTH];
-	char m_aSixupVoteDescription[VOTE_DESC_LENGTH];
-	char m_aVoteCommand[VOTE_CMD_LENGTH];
-	char m_aVoteReason[VOTE_REASON_LENGTH];
-	int m_NumVoteOptions;
-	int m_VoteEnforce;
 	char m_aaZoneEnterMsg[NUM_TUNEZONES][256]; // 0 is used for switching from or to area without tunings
 	char m_aaZoneLeaveMsg[NUM_TUNEZONES][256];
 
 	char m_aDeleteTempfile[128];
 	void DeleteTempfile();
-
-	enum
-	{
-		VOTE_ENFORCE_UNKNOWN = 0,
-		VOTE_ENFORCE_NO,
-		VOTE_ENFORCE_YES,
-		VOTE_ENFORCE_ABORT,
-	};
-	CHeap *m_pVoteOptionHeap;
-	CVoteOptionServer *m_pVoteOptionFirst;
-	CVoteOptionServer *m_pVoteOptionLast;
 
 	// helper functions
 	void CreateDamageInd(vec2 Pos, float AngleMod, int Amount);
@@ -204,7 +175,6 @@ public:
 	};
 
 	// network
-	void CallVote(int ClientID, const char *aDesc, const char *aCmd, const char *pReason, const char *aChatmsg, const char *pSixupDesc = 0);
 	void SendChatTarget(int To, const char *pText, int Flags = CHAT_SIX | CHAT_SIXUP);
 	void SendChatTeam(int Team, const char *pText);
 	void SendChat(int ClientID, int Team, const char *pText, int SpamProtectionClientID = -1, int Flags = CHAT_SIX | CHAT_SIXUP);
@@ -218,11 +188,7 @@ public:
 	void List(int ClientID, const char *filter);
 
 	//
-	void CheckPureTuning();
 	void SendTuningParams(int ClientID, int Zone = 0);
-
-	struct CVoteOptionServer *GetVoteOption(int Index);
-	void ProgressVoteOptions(int ClientID);
 
 	//
 	void LoadMapSettings();
@@ -231,6 +197,7 @@ public:
 	virtual void OnInit();
 	virtual void OnConsoleInit();
 	virtual void OnMapChange(char *pNewMapName, int MapNameSize);
+	void LoadMapSettings(char *pNewMapName, int MapNameSize);
 	virtual void OnShutdown();
 
 	virtual void OnTick();
@@ -266,18 +233,10 @@ public:
 	bool OnClientDDNetVersionKnown(int ClientID);
 	virtual void FillAntibot(CAntibotRoundData *pData);
 	int ProcessSpamProtection(int ClientID);
-	// Describes the time when the first player joined the server.
-	int64 m_NonEmptySince;
-	int64 m_LastMapVote;
 	int GetClientVersion(int ClientID) const;
 	bool PlayerExists(int ClientID) const { return m_apPlayers[ClientID]; }
-	void ForceVote(int EnforcerID, bool Success);
 
 private:
-	bool m_VoteWillPass;
-
-	//DDRace Console Commands
-
 	//static void ConMute(IConsole::IResult *pResult, void *pUserData);
 	//static void ConUnmute(IConsole::IResult *pResult, void *pUserData);
 	static void ConKillPlayer(IConsole::IResult *pResult, void *pUserData);
@@ -317,11 +276,6 @@ private:
 	static void ConSettings(IConsole::IResult *pResult, void *pUserData);
 	static void ConRules(IConsole::IResult *pResult, void *pUserData);
 	static void ConKill(IConsole::IResult *pResult, void *pUserData);
-	static void ConTogglePause(IConsole::IResult *pResult, void *pUserData);
-	static void ConTogglePauseVoted(IConsole::IResult *pResult, void *pUserData);
-	static void ConToggleSpec(IConsole::IResult *pResult, void *pUserData);
-	static void ConToggleSpecVoted(IConsole::IResult *pResult, void *pUserData);
-	static void ConForcePause(IConsole::IResult *pResult, void *pUserData);
 
 	static void ConMe(IConsole::IResult *pResult, void *pUserData);
 	static void ConWhisper(IConsole::IResult *pResult, void *pUserData);
@@ -374,25 +328,10 @@ private:
 	void Converse(int ClientID, char *pStr);
 	bool IsVersionBanned(int Version);
 
+	CVoteManager *m_pVoteManager;
 public:
 	CLayers *Layers() { return &m_Layers; }
-
-	enum
-	{
-		VOTE_ENFORCE_NO_ADMIN = VOTE_ENFORCE_YES + 1,
-		VOTE_ENFORCE_YES_ADMIN,
-
-		VOTE_TYPE_UNKNOWN = 0,
-		VOTE_TYPE_OPTION,
-		VOTE_TYPE_KICK,
-		VOTE_TYPE_SPECTATE,
-	};
-	int m_VoteVictim;
-	int m_VoteEnforcer;
-
-	inline bool IsOptionVote() const { return m_VoteType == VOTE_TYPE_OPTION; };
-	inline bool IsKickVote() const { return m_VoteType == VOTE_TYPE_KICK; };
-	inline bool IsSpecVote() const { return m_VoteType == VOTE_TYPE_SPECTATE; };
+	CVoteManager *VoteManager() const { return m_pVoteManager; }
 
 	static void SendChatResponse(const char *pLine, void *pUser, ColorRGBA PrintColor = {1, 1, 1, 1});
 	static void SendChatResponseAll(const char *pLine, void *pUser);

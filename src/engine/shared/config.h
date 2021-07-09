@@ -9,9 +9,8 @@
 #define CONFIG_FILE "settings_2xp.cfg"
 #define AUTOEXEC_SERVER_FILE "autoexec_2xp.cfg"
 
-class CConfig
+struct CConfig
 {
-public:
 #define MACRO_CONFIG_INT(Name, ScriptName, Def, Min, Max, Save, Desc) int m_##Name;
 #define MACRO_CONFIG_COL(Name, ScriptName, Def, Save, Desc) unsigned m_##Name;
 #define MACRO_CONFIG_STR(Name, ScriptName, Len, Def, Save, Desc) char m_##Name[Len]; // Flawfinder: ignore
