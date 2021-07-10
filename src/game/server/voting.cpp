@@ -98,15 +98,14 @@ void CVoteManager::StartVote(const char *pDesc, const char *pCommand, const char
 
 void CVoteManager::EndVote()
 {
+	m_VoteState = 0;
+	m_VoteUpdate = false;
 	m_VoteCloseTime = 0;
 	SendVoteSet(-1);
 }
 
 void CVoteManager::SendVoteSet(int ClientID)
 {
-	if(!IsActive())
-		return;
-
 	::CNetMsg_Sv_VoteSet Msg6;
 	protocol7::CNetMsg_Sv_VoteSet Msg7;
 
@@ -133,10 +132,10 @@ void CVoteManager::SendVoteSet(int ClientID)
 		Msg6.m_pReason = Msg7.m_pReason = "";
 
 		int &Type = (Msg7.m_Type = protocol7::VOTE_UNKNOWN);
-		if(!(m_VoteState & VOTE_PASSED))
-			Type = protocol7::VOTE_END_FAIL;
-		else
+		if(m_VoteState & VOTE_PASSED)
 			Type = protocol7::VOTE_END_PASS;
+		else
+			Type = protocol7::VOTE_END_FAIL;
 		if(m_VoteState & VOTE_ABORTED)
 			Type = protocol7::VOTE_END_ABORT;
 
@@ -219,11 +218,11 @@ void CVoteManager::Tick()
 		GameServer()->SendChat(-1, CGameContext::CHAT_ALL, "[VOTE] Status:", -1, CGameContext::CHAT_SIX);
 		if(m_VoteState & VOTE_PASSED)
 		{
+			GameServer()->SendChat(-1, CGameContext::CHAT_ALL, "[VOTE] Passed", -1, CGameContext::CHAT_SIX);
+
 			Server()->SetRconCID(IServer::RCON_CID_VOTE);
 			GameServer()->Console()->ExecuteLine(m_aVoteCommand);
 			Server()->SetRconCID(IServer::RCON_CID_SERV);
-			
-			GameServer()->SendChat(-1, CGameContext::CHAT_ALL, "[VOTE] Passed", -1, CGameContext::CHAT_SIX);
 
 			if(GameServer()->GetPlayer(m_VoteCreator))
 				GameServer()->GetPlayer(m_VoteCreator)->m_LastVoteCall = 0;
@@ -237,6 +236,8 @@ void CVoteManager::Tick()
 		{
 			GameServer()->SendChat(-1, CGameContext::CHAT_ALL, "[VOTE] By Authorized player", -1, CGameContext::CHAT_SIX);
 		}
+
+		Total = 0, Yes = 0, No = 0;
 
 		EndVote();
 	}
@@ -307,10 +308,6 @@ void CVoteManager::Tick()
 				else if(ActVote < 0)
 					No++;
 			}
-
-			if(GameServer()->Config()->m_SvVoteMaxTotal && Total > GameServer()->Config()->m_SvVoteMaxTotal &&
-				(IsKickVote() || IsSpecVote()))
-				Total = GameServer()->Config()->m_SvVoteMaxTotal;
 
 			if((Yes > Total / (100.0f / GameServer()->Config()->m_SvVoteYesPercentage)))
 				m_VoteState |= VOTE_PASSED;

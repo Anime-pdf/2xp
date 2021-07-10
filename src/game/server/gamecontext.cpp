@@ -580,6 +580,8 @@ void CGameContext::OnTick()
 	m_World.m_Core.m_Tuning[0] = m_Tuning;
 	m_World.Tick();
 
+	VoteManager()->Tick();
+
 	//if(world.paused) // make sure that the game object always updates
 	m_pController->Tick();
 
