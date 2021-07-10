@@ -27,6 +27,7 @@ class CVoteManager
 	CHeap *m_pVoteOptionHeap;
 	CVoteOptionServer *m_pVoteOptionFirst;
 	CVoteOptionServer *m_pVoteOptionLast;
+	int m_NumVoteOptions;
 
 	char m_VoteState;
 	int m_VoteVictim;
@@ -41,8 +42,6 @@ class CVoteManager
 	char m_aSixupVoteDescription[VOTE_DESC_LENGTH];
 	char m_aVoteCommand[VOTE_CMD_LENGTH];
 	char m_aVoteReason[VOTE_REASON_LENGTH];
-	int m_NumVoteOptions;
-	int m_VoteEnforce;
 
 public:
 	enum
@@ -60,6 +59,8 @@ public:
 		VOTE_TYPE_SPECTATE,
 	};
 
+	void Reset(bool Clear = false);
+
 	CVoteManager(CGameContext *pGameServer);
 	~CVoteManager();
 
@@ -69,19 +70,18 @@ public:
 	char GetState() const { return m_VoteState; }
 	int GetVictim() const { return m_VoteVictim; }
 	int GetEnforcer() const { return m_VoteEnforcer; }
-	struct CVoteOptionServer *GetVoteOption(int Index);
-
-	struct CVoteOptionServer *GetVoteOptionByDesc(const char* Desc);
-
 	int GetVotePos() { return ++m_VotePos; }
+	struct CVoteOptionServer *GetVoteOption(int Index);
+	struct CVoteOptionServer *GetVoteOptionByDesc(const char* Desc);
 
 	inline bool IsOptionVote() const { return m_VoteType == VOTE_TYPE_OPTION; };
 	inline bool IsKickVote() const { return m_VoteType == VOTE_TYPE_KICK; };
 	inline bool IsSpecVote() const { return m_VoteType == VOTE_TYPE_SPECTATE; };
 
 	bool IsUpdating() const { return m_VoteUpdate; }
-	void SetUpdating(bool State) { m_VoteUpdate = State; }
 	bool IsActive() const { return m_VoteCloseTime; }
+
+	void SetUpdating(bool State) { m_VoteUpdate = State; }
 
 	void TryCallVote(int ClientID, CNetMsg_Cl_CallVote *pMsg);
 	/* make it private */void CallVote(int ClientID, const char *aDesc, const char *aCmd, const char *pReason, const char *aChatmsg, const char *pSixupDesc = 0);
@@ -96,11 +96,10 @@ public:
 	void StartVote(const char *pDesc, const char *pCommand, const char *pReason, const char *pSixupDesc);
 	void Tick();
 	void EndVote();
+
 	void SendVoteSet(int ClientID);
 	void SendVoteStatus(int ClientID, int Total, int Yes, int No);
 	void AbortVoteKickOnDisconnect(int ClientID);
-
-	void Reset(bool Clear = false);
 };
 
 #endif

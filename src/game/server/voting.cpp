@@ -140,7 +140,7 @@ void CVoteManager::SendVoteSet(int ClientID)
 			Type = protocol7::VOTE_END_ABORT;
 
 		if(m_VoteState & VOTE_FORCED)
-			Msg7.m_ClientID = -1;
+			Msg7.m_ClientID = m_VoteEnforcer;
 	}
 
 	if(ClientID == -1)
@@ -312,7 +312,7 @@ void CVoteManager::Tick()
 			if((Yes > Total / (100.0f / GameServer()->Config()->m_SvVoteYesPercentage)))
 				m_VoteState |= VOTE_PASSED;
 			else if(No >= Total - Total / (100.0f / GameServer()->Config()->m_SvVoteYesPercentage))
-				m_VoteEnforce &= ~VOTE_PASSED;
+				m_VoteState &= ~VOTE_PASSED;
 
 			if(Yes > (Yes + No) / (100.0f / GameServer()->Config()->m_SvVoteYesPercentage))
 				m_VoteState |= VOTE_FINISHED;
