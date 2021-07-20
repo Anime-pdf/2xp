@@ -64,7 +64,7 @@ void CPlayer::Reset()
 	if(Server()->IsSixup(m_ClientID))
 		m_TimerType = TIMERTYPE_SIXUP;
 	else
-		m_TimerType = (g_Config.m_SvDefaultTimerType == TIMERTYPE_GAMETIMER || g_Config.m_SvDefaultTimerType == TIMERTYPE_GAMETIMER_AND_BROADCAST) ? TIMERTYPE_BROADCAST : g_Config.m_SvDefaultTimerType;
+		m_TimerType = TIMERTYPE_GAMETIMER;
 
 	m_DefEmote = EMOTE_NORMAL;
 	m_Afk = true;
@@ -93,17 +93,7 @@ void CPlayer::Reset()
 	m_Last_Team = 0;
 	m_LastSQLQuery = 0;
 
-	int64 Now = Server()->Tick();
-	int64 TickSpeed = Server()->TickSpeed();
-	// If the player joins within ten seconds of the server becoming
-	// non-empty, allow them to vote immediately. This allows players to
-	// vote after map changes or when they join an empty server.
-	//
-	// Otherwise, block voting in the beginning after joining.
-	if(Now > GameServer()->m_NonEmptySince + 3 * TickSpeed)
-		m_FirstVoteTick = Now + g_Config.m_SvJoinVoteDelay * TickSpeed;
-	else
-		m_FirstVoteTick = Now;
+	m_FirstVoteTick = Server()->Tick();
 }
 
 static int PlayerFlags_SevenToSix(int Flags)

@@ -58,36 +58,13 @@ void CSnapIDPool::Reset()
 
 	m_aIDs[MAX_IDS - 1].m_Next = -1;
 	m_FirstFree = 0;
-	m_FirstTimed = -1;
-	m_LastTimed = -1;
 	m_Usage = 0;
 	m_InUsage = 0;
-}
-
-void CSnapIDPool::RemoveFirstTimeout()
-{
-	int NextTimed = m_aIDs[m_FirstTimed].m_Next;
-
-	// add it to the free list
-	m_aIDs[m_FirstTimed].m_Next = m_FirstFree;
-	m_aIDs[m_FirstTimed].m_State = 0;
-	m_FirstFree = m_FirstTimed;
-
-	// remove it from the timed list
-	m_FirstTimed = NextTimed;
-	if(m_FirstTimed == -1)
-		m_LastTimed = -1;
-
-	m_Usage--;
 }
 
 int CSnapIDPool::NewID()
 {
 	int64 Now = time_get();
-
-	// process timed ids
-	while(m_FirstTimed != -1 && m_aIDs[m_FirstTimed].m_Timeout < Now)
-		RemoveFirstTimeout();
 
 	int ID = m_FirstFree;
 	dbg_assert(ID != -1, "id error");
@@ -100,13 +77,6 @@ int CSnapIDPool::NewID()
 	return ID;
 }
 
-void CSnapIDPool::TimeoutIDs()
-{
-	// process timed ids
-	while(m_FirstTimed != -1)
-		RemoveFirstTimeout();
-}
-
 void CSnapIDPool::FreeID(int ID)
 {
 	if(ID < 0)
@@ -115,19 +85,7 @@ void CSnapIDPool::FreeID(int ID)
 
 	m_InUsage--;
 	m_aIDs[ID].m_State = 2;
-	m_aIDs[ID].m_Timeout = time_get() + time_freq() * 5;
 	m_aIDs[ID].m_Next = -1;
-
-	if(m_LastTimed != -1)
-	{
-		m_aIDs[m_LastTimed].m_Next = ID;
-		m_LastTimed = ID;
-	}
-	else
-	{
-		m_FirstTimed = ID;
-		m_LastTimed = ID;
-	}
 }
 
 void CServerBan::InitServerBan(IConsole *pConsole, IStorage *pStorage, CServer *pServer)
@@ -223,7 +181,7 @@ void CServerBan::ConBanExt(IConsole::IResult *pResult, void *pUser)
 
 	const char *pStr = pResult->GetString(0);
 	int Minutes = pResult->NumArguments() > 1 ? clamp(pResult->GetInteger(1), 0, 525600) : 30;
-	const char *pReason = pResult->NumArguments() > 2 ? pResult->GetString(2) : "No reason given";
+	const char *pReason = pResult->NumArguments() > 2 ? pResult->GetString(2) : "No reason";
 
 	if(str_isallnum(pStr))
 	{
@@ -2236,7 +2194,7 @@ char *CServer::GetMapName() const
 int CServer::LoadMap(const char *pMapName)
 {
 	char aBuf[512];
-	str_format(aBuf, sizeof(aBuf), "maps/%s.map", pMapName);
+	str_format(aBuf, sizeof(aBuf), "maps/%s/%s.map", pMapName, pMapName);
 	GameServer()->OnMapChange(aBuf, sizeof(aBuf));
 
 	if(!m_pMap->Load(aBuf))
@@ -2258,9 +2216,6 @@ int CServer::LoadMap(const char *pMapName)
 			Storage()->RemoveFile(aPath, IStorage::TYPE_SAVE);
 		}
 	}
-
-	// reinit snapshot ids
-	m_IDPool.TimeoutIDs();
 
 	// get the crc of the map
 	m_aCurrentMapSha256[SIX] = m_pMap->Sha256();
@@ -2286,7 +2241,7 @@ int CServer::LoadMap(const char *pMapName)
 	// load sixup version of the map
 	if(g_Config.m_SvSixup)
 	{
-		str_format(aBuf, sizeof(aBuf), "maps7/%s.map", pMapName);
+		str_format(aBuf, sizeof(aBuf), "maps7/%s/%s.map", pMapName);
 		IOHANDLE File = Storage()->OpenFile(aBuf, IOFLAG_READ, IStorage::TYPE_ALL);
 		if(!File)
 		{
