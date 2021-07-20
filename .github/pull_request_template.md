@@ -1,5 +1,17 @@
 <!-- What is the motivation for the changes of this pull request -->
 
+## Fixed:
+<!-- What did you fix -->
+
+## Added:
+<!-- What did you add -->
+
+## Deleted:
+<!-- What did you delete -->
+
+## Comments:
+<!-- Extra comments to understand implementations and so on -->
+
 ## Checklist
 
 - [ ] Tested the change ingame
