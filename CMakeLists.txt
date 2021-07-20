@@ -524,43 +524,43 @@ file(COPY ${COPY_FILES} DESTINATION .)
 
 function(generate_source output_file script_parameter)
   add_custom_command(OUTPUT ${output_file}
-    COMMAND ${PYTHON_EXECUTABLE} datasrc/compile.py ${script_parameter}
+    COMMAND ${PYTHON_EXECUTABLE} codegen/compile.py ${script_parameter}
       > "${PROJECT_BINARY_DIR}/${output_file}"
     DEPENDS
-      datasrc/compile.py
-      datasrc/content.py
-      datasrc/datatypes.py
-      datasrc/network.py
+      codegen/compile.py
+      codegen/content.py
+      codegen/datatypes.py
+      codegen/network.py
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
   )
 endfunction()
 
 function(generate_source7 output_file script_parameter)
   add_custom_command(OUTPUT ${output_file}
-    COMMAND ${PYTHON_EXECUTABLE} -m datasrc.seven.compile ${script_parameter}
+    COMMAND ${PYTHON_EXECUTABLE} -m codegen.seven.compile ${script_parameter}
       > "${PROJECT_BINARY_DIR}/${output_file}"
     DEPENDS
-      datasrc/seven/compile.py
-      datasrc/seven/content.py
-      datasrc/seven/datatypes.py
-      datasrc/seven/network.py
+      codegen/seven/compile.py
+      codegen/seven/content.py
+      codegen/seven/datatypes.py
+      codegen/seven/network.py
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
   )
 endfunction()
 
 function(generate_maps output_file)
   add_custom_command(OUTPUT ${output_file}
-    COMMAND ${PYTHON_EXECUTABLE} datasrc/crosscompile.py
+    COMMAND ${PYTHON_EXECUTABLE} codegen/crosscompile.py
       > "${PROJECT_BINARY_DIR}/${output_file}"
     DEPENDS
-      datasrc/compile.py
-      datasrc/content.py
-      datasrc/datatypes.py
-      datasrc/network.py
-      datasrc/seven/compile.py
-      datasrc/seven/content.py
-      datasrc/seven/datatypes.py
-      datasrc/seven/network.py
+      codegen/compile.py
+      codegen/content.py
+      codegen/datatypes.py
+      codegen/network.py
+      codegen/seven/compile.py
+      codegen/seven/content.py
+      codegen/seven/datatypes.py
+      codegen/seven/network.py
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
   )
 endfunction()
@@ -901,7 +901,7 @@ set(CPACK_SOURCE_FILES
   README.md
   cmake/
   data/
-  datasrc/
+  codegen/
   libs/
   license.txt
   other/
