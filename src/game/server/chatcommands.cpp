@@ -103,102 +103,6 @@ void CGameContext::ConRules(IConsole::IResult *pResult, void *pUserData)
 	CGameContext *pSelf = (CGameContext *)pUserData;
 }
 
-void ToggleSpecPause(IConsole::IResult *pResult, void *pUserData, int PauseType)
-{
-	if(!CheckClientID(pResult->m_ClientID))
-		return;
-
-	CGameContext *pSelf = (CGameContext *)pUserData;
-	IServer *pServ = pSelf->Server();
-	CPlayer *pPlayer = pSelf->m_apPlayers[pResult->m_ClientID];
-	if(!pPlayer)
-		return;
-
-	int PauseState = pPlayer->IsPaused();
-	if(PauseState > 0)
-	{
-		char aBuf[128];
-		str_format(aBuf, sizeof(aBuf), "You are force-paused for %d seconds.", (PauseState - pServ->Tick()) / pServ->TickSpeed());
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "spec", aBuf);
-	}
-	else if(pResult->NumArguments() > 0)
-	{
-		if(-PauseState == PauseType && pPlayer->m_SpectatorID != pResult->m_ClientID && pServ->ClientIngame(pPlayer->m_SpectatorID) && !str_comp(pServ->ClientName(pPlayer->m_SpectatorID), pResult->GetString(0)))
-		{
-			pPlayer->Pause(CPlayer::PAUSE_NONE, false);
-		}
-		else
-		{
-			pPlayer->Pause(PauseType, false);
-			pPlayer->SpectatePlayerName(pResult->GetString(0));
-		}
-	}
-	else if(-PauseState != CPlayer::PAUSE_NONE && PauseType != CPlayer::PAUSE_NONE)
-	{
-		pPlayer->Pause(CPlayer::PAUSE_NONE, false);
-	}
-	else if(-PauseState != PauseType)
-	{
-		pPlayer->Pause(PauseType, false);
-	}
-}
-
-void ToggleSpecPauseVoted(IConsole::IResult *pResult, void *pUserData, int PauseType)
-{
-	if(!CheckClientID(pResult->m_ClientID))
-		return;
-
-	CGameContext *pSelf = (CGameContext *)pUserData;
-	CPlayer *pPlayer = pSelf->m_apPlayers[pResult->m_ClientID];
-	if(!pPlayer)
-		return;
-
-	int PauseState = pPlayer->IsPaused();
-	if(PauseState > 0)
-	{
-		IServer *pServ = pSelf->Server();
-		char aBuf[128];
-		str_format(aBuf, sizeof(aBuf), "You are force-paused for %d seconds.", (PauseState - pServ->Tick()) / pServ->TickSpeed());
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "spec", aBuf);
-		return;
-	}
-
-	bool IsPlayerBeingVoted = pSelf->m_VoteCloseTime &&
-				  (pSelf->IsKickVote() || pSelf->IsSpecVote()) &&
-				  pResult->m_ClientID != pSelf->m_VoteVictim;
-	if((!IsPlayerBeingVoted && -PauseState == PauseType) ||
-		(IsPlayerBeingVoted && PauseState && pPlayer->m_SpectatorID == pSelf->m_VoteVictim))
-	{
-		pPlayer->Pause(CPlayer::PAUSE_NONE, false);
-	}
-	else
-	{
-		pPlayer->Pause(PauseType, false);
-		if(IsPlayerBeingVoted)
-			pPlayer->m_SpectatorID = pSelf->m_VoteVictim;
-	}
-}
-
-void CGameContext::ConToggleSpec(IConsole::IResult *pResult, void *pUserData)
-{
-	ToggleSpecPause(pResult, pUserData, g_Config.m_SvPauseable ? CPlayer::PAUSE_SPEC : CPlayer::PAUSE_PAUSED);
-}
-
-void CGameContext::ConToggleSpecVoted(IConsole::IResult *pResult, void *pUserData)
-{
-	ToggleSpecPauseVoted(pResult, pUserData, g_Config.m_SvPauseable ? CPlayer::PAUSE_SPEC : CPlayer::PAUSE_PAUSED);
-}
-
-void CGameContext::ConTogglePause(IConsole::IResult *pResult, void *pUserData)
-{
-	ToggleSpecPause(pResult, pUserData, CPlayer::PAUSE_PAUSED);
-}
-
-void CGameContext::ConTogglePauseVoted(IConsole::IResult *pResult, void *pUserData)
-{
-	ToggleSpecPauseVoted(pResult, pUserData, CPlayer::PAUSE_PAUSED);
-}
-
 void CGameContext::ConMe(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
@@ -428,11 +332,4 @@ void CGameContext::ConFormattedAccountData(IConsole::IResult *pResult, void *pUs
 	pPlayer->GetAccount()->Format(aBuf, sizeof(aBuf));
 
 	pSelf->SendChatTarget(pResult->m_ClientID, aBuf);
-}
-
-bool CheckClientID(int ClientID)
-{
-	if(ClientID < 0 || ClientID >= MAX_CLIENTS)
-		return false;
-	return true;
 }

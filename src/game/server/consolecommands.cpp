@@ -287,21 +287,6 @@ void CGameContext::ConKill(IConsole::IResult *pResult, void *pUserData)
 	//pPlayer->m_RespawnTick = pSelf->Server()->Tick() + pSelf->Server()->TickSpeed() * g_Config.m_SvSuicidePenalty;
 }
 
-void CGameContext::ConForcePause(IConsole::IResult *pResult, void *pUserData)
-{
-	CGameContext *pSelf = (CGameContext *)pUserData;
-	int Victim = pResult->GetVictim();
-	int Seconds = 0;
-	if(pResult->NumArguments() > 1)
-		Seconds = clamp(pResult->GetInteger(1), 0, 360);
-
-	CPlayer *pPlayer = pSelf->m_apPlayers[Victim];
-	if(!pPlayer)
-		return;
-
-	pPlayer->ForcePause(Seconds);
-}
-
 bool CGameContext::TryVoteMute(const NETADDR *pAddr, int Secs)
 {
 	// find a matching vote mute for this ip, update expiration time if found
@@ -607,11 +592,15 @@ void CGameContext::ConUnFreezeHammer(IConsole::IResult *pResult, void *pUserData
 
 	pChr->m_FreezeHammer = false;
 }
+
+#include "voting.h"
+
 void CGameContext::ConVoteNo(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
 
-	pSelf->ForceVote(pResult->m_ClientID, false);
+	
+	pSelf->VoteManager()->ForceCurrentVote(pResult->m_ClientID, false);
 }
 
 void CGameContext::ConDumpAntibot(IConsole::IResult *pResult, void *pUserData)

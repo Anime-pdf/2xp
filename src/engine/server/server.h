@@ -45,14 +45,11 @@ class CSnapIDPool
 	public:
 		short m_Next;
 		short m_State; // 0 = free, 1 = allocated, 2 = timed
-		int m_Timeout;
 	};
 
 	CID m_aIDs[MAX_IDS];
 
 	int m_FirstFree;
-	int m_FirstTimed;
-	int m_LastTimed;
 	int m_Usage;
 	int m_InUsage;
 
@@ -60,9 +57,7 @@ public:
 	CSnapIDPool();
 
 	void Reset();
-	void RemoveFirstTimeout();
 	int NewID();
-	void TimeoutIDs();
 	void FreeID(int ID);
 };
 
@@ -82,8 +77,6 @@ public:
 	virtual int BanRange(const CNetRange *pRange, int Seconds, const char *pReason);
 
 	static void ConBanExt(class IConsole::IResult *pResult, void *pUser);
-	static void ConBanRegion(class IConsole::IResult *pResult, void *pUser);
-	static void ConBanRegionRange(class IConsole::IResult *pResult, void *pUser);
 };
 
 class CServer : public IServer
