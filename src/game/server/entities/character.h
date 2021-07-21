@@ -7,7 +7,6 @@
 #include <game/server/entity.h>
 
 class CAntibot;
-class CGameTeams;
 struct CAntibotCharacterData;
 
 enum
@@ -24,8 +23,6 @@ enum
 class CCharacter : public CEntity
 {
 	MACRO_ALLOC_POOL_ID()
-
-	friend class CSaveTee; // need to use core
 
 public:
 	//character's size
@@ -141,7 +138,6 @@ private:
 
 	// the player core for the physics
 	CCharacterCore m_Core;
-	CGameTeams *m_pTeams = nullptr;
 
 	std::map<int, std::vector<vec2>> *m_pTeleOuts = nullptr;
 	std::map<int, std::vector<vec2>> *m_pTeleCheckOuts = nullptr;
@@ -171,7 +167,6 @@ private:
 	bool m_Solo;
 
 public:
-	CGameTeams *Teams() { return m_pTeams; }
 	void SetTeleports(std::map<int, std::vector<vec2>> *pTeleOuts, std::map<int, std::vector<vec2>> *pTeleCheckOuts);
 
 	void FillAntibot(CAntibotCharacterData *pData);

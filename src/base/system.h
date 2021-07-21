@@ -1540,6 +1540,24 @@ void str_hex(char *dst, int dst_size, const void *data, int data_size);
 		- The contents of the buffer is only valid on success
 */
 int str_hex_decode(void *dst, int dst_size, const char *src);
+
+/*
+	Function: str_fcat
+		Performs printf formating appending to a buffer.
+
+	Parameters:
+		buffer - Pointer to the buffer to recive the formated string.
+		buffer_size - Size of the buffer.
+		format - printf formating string.
+		... - Parameters for the formating.
+
+	Remarks:
+		- See the C manual for syntax for the printf formating string.
+		- The strings are treated as zero-termineted strings.
+		- Garantees that dst string will contain zero-termination.
+*/
+void str_fcat(char *buffer, int buffer_size, const char *format, ...);
+
 /*
 	Function: str_timestamp
 		Copies a time stamp in the format year-month-day_hour-minute-second to the string.

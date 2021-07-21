@@ -1,33 +1,37 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
+
+#include <string.h>
+#include <base/math.h>
 #include <base/tl/sorted_array.h>
 
-#include "gamecontext.h"
-#include "teeinfo.h"
 #include <antibot/antibot_data.h>
-#include <base/math.h>
+
 #include <engine/console.h>
 #include <engine/engine.h>
+#include <engine/storage.h>
 #include <engine/map.h>
 #include <engine/server/server.h>
 #include <engine/shared/config.h>
 #include <engine/shared/datafile.h>
 #include <engine/shared/linereader.h>
 #include <engine/shared/memheap.h>
-#include <engine/storage.h>
+
 #include <game/collision.h>
 #include <game/gamecore.h>
 #include <game/version.h>
-#include <string.h>
 
 #include <game/generated/protocol7.h>
 #include <game/generated/protocolglue.h>
 
 #include "entities/character.h"
 #include "gamemodes/2xp.h"
-#include "player.h"
 
+#include "teeinfo.h"
+#include "player.h"
 #include "voting.h"
+
+#include "gamecontext.h"
 
 enum
 {
@@ -608,9 +612,6 @@ void CGameContext::OnTick()
 	{
 		if(m_apPlayers[i])
 		{
-			// send vote options
-			VoteManager()->ProgressVoteOptions(i);
-
 			m_apPlayers[i]->Tick();
 			m_apPlayers[i]->PostTick();
 		}
@@ -766,7 +767,7 @@ void CGameContext::OnClientEnter(int ClientID)
 	VoteManager()->SetUpdating(true);
 
 	// send active vote
-	VoteManager()->SendVoteSet(ClientID);
+	VoteManager()->OnClientEnter(ClientID);
 
 	Server()->ExpireServerInfo();
 

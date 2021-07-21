@@ -20,6 +20,16 @@ struct CVoteOptionServer
 	char m_aCommand[1];
 };
 
+class IVoteManager : public IInterface
+{
+
+};
+
+class IVoteEngine : public IVoteManager
+{
+
+};
+
 class CVoteManager
 {
 	CGameContext *m_pGameServer;
@@ -87,19 +97,22 @@ public:
 	/* make it private */void CallVote(int ClientID, const char *aDesc, const char *aCmd, const char *pReason, const char *aChatmsg, const char *pSixupDesc = 0);
 	void ForceVote(int ClientID, const char *pType, const char *pValue, const char *pReason);
 	void ForceCurrentVote(int EnforcerID, bool Success);
-	void ProgressVoteOptions(int ClientID);
+	/* make it private */ void ProgressVoteOptions(int ClientID);
 
 	void ClearVotes();
 	void AddVote(const char *pDescription, const char *pCommand);
 	void RemoveVote(const char *pDescription);
 
-	void StartVote(const char *pDesc, const char *pCommand, const char *pReason, const char *pSixupDesc);
+	/* make it private */ void StartVote(const char *pDesc, const char *pCommand, const char *pReason, const char *pSixupDesc);
 	void Tick();
-	void EndVote();
+	/* make it private */ void EndVote();
 
-	void SendVoteSet(int ClientID);
-	void SendVoteStatus(int ClientID, int Total, int Yes, int No);
+	/* make it private */ void SendVoteSet(int ClientID);
+	/* make it private */ void SendVoteStatus(int ClientID, int Total, int Yes, int No);
 	void AbortVoteKickOnDisconnect(int ClientID);
+
+	// hooks
+	void OnClientEnter(int ClientID);
 };
 
 #endif

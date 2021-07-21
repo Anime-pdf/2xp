@@ -318,6 +318,9 @@ void CVoteManager::Tick()
 				m_VoteState |= VOTE_FINISHED;
 		}
 	}
+
+	for(int i = 0; i < MAX_CLIENTS; i++)
+		ProgressVoteOptions(i);
 }
 
 struct CVoteOptionServer *CVoteManager::GetVoteOption(int Index)
@@ -764,4 +767,9 @@ void CVoteManager::ForceVote(int ClientID, const char *pType, const char *pValue
 		str_format(aBuf, sizeof(aBuf), "set_team %d -1 %d", SpectateID, GameServer()->Config()->m_SvVoteSpectateRejoindelay);
 		GameServer()->Console()->ExecuteLine(aBuf);
 	}
+}
+
+void CVoteManager::OnClientEnter(int ClientID)
+{
+
 }

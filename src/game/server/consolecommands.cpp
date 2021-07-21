@@ -593,16 +593,6 @@ void CGameContext::ConUnFreezeHammer(IConsole::IResult *pResult, void *pUserData
 	pChr->m_FreezeHammer = false;
 }
 
-#include "voting.h"
-
-void CGameContext::ConVoteNo(IConsole::IResult *pResult, void *pUserData)
-{
-	CGameContext *pSelf = (CGameContext *)pUserData;
-
-	
-	pSelf->VoteManager()->ForceCurrentVote(pResult->m_ClientID, false);
-}
-
 void CGameContext::ConDumpAntibot(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;

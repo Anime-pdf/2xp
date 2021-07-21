@@ -2925,6 +2925,25 @@ int str_hex_decode(void *dst, int dst_size, const char *src)
 	return 0;
 }
 
+void str_fcat(char *buffer, int buffer_size, const char *format, ...)
+{
+	int len = str_length(buffer);
+
+#if defined(CONF_FAMILY_WINDOWS)
+	va_list ap;
+	va_start(ap, format);
+	_vsnprintf(buffer + len, buffer_size - len, format, ap);
+	va_end(ap);
+#else
+	va_list ap;
+	va_start(ap, format);
+	vsnprintf(buffer + len, buffer_size - len, format, ap);
+	va_end(ap);
+#endif
+
+	buffer[buffer_size - 1] = 0; /* assure null termination */
+}
+
 #ifdef __GNUC__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-nonliteral"
