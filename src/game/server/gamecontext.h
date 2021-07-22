@@ -71,7 +71,6 @@ class CGameContext : public IGameServer
 	CNetObjHandler m_NetObjHandler;
 	CTuningParams m_Tuning;
 	CTuningParams m_aTuningList[NUM_TUNEZONES];
-	array<string> m_aCensorlist;
 
 	bool m_TeeHistorianActive;
 	CTeeHistorian m_TeeHistorian;
@@ -103,7 +102,6 @@ class CGameContext : public IGameServer
 	static void ConClearVotes(IConsole::IResult *pResult, void *pUserData);
 	static void ConAddMapVotes(IConsole::IResult *pResult, void *pUserData);
 	static void ConVote(IConsole::IResult *pResult, void *pUserData);
-	static void ConVoteNo(IConsole::IResult *pResult, void *pUserData);
 	static void ConDumpAntibot(IConsole::IResult *pResult, void *pUserData);
 	static void ConchainSpecialMotdupdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 
@@ -206,7 +204,6 @@ public:
 	virtual void OnPostSnap();
 
 	void *PreProcessMsg(int *MsgID, CUnpacker *pUnpacker, int ClientID);
-	void CensorMessage(char *pCensoredMessage, const char *pMessage, int Size);
 	virtual void OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID);
 
 	virtual bool OnClientDataPersist(int ClientID, void *pData);

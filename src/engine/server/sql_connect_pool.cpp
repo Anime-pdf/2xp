@@ -1,5 +1,6 @@
 #include <mutex>
 #include <thread>
+#include <sstream>
 #include <stdarg.h>
 #include <mysql_connection.h>
 #include <cppconn/driver.h>
@@ -464,7 +465,7 @@ void CConnectionPool::ASDS(int Milliseconds, std::function<void(ResultPtr)> func
 	Thread.detach();
 }
 
-void CConnectionPool::SPS(const char *Q, int AN, SSqlArg *A)
+void CConnectionPool::SPS(const char* T, SqlArgs A)
 {
 	const char *pError = nullptr;
 
@@ -472,41 +473,83 @@ void CConnectionPool::SPS(const char *Q, int AN, SSqlArg *A)
 	m_pDriver->threadInit();
 	Connection *pConnection = SJK.GetConnection();
 	ResultPtr pResult = nullptr;
-	PreparedStatement* ps;
-	
+	PreparedStatement* pPS;
+
+	// TODO: idiotic way, use boost eblan
+	std::stringstream QS;
+
+	QS << "INSERT INTO " << T << "(";
+
+	for (int i = 0; i < A.Size(); i++)
+	{
+		QS << A.GetKey(i);
+		if (i + 1 != A.Size())
+		{
+			QS << ", ";
+		}
+	}
+
+	QS << " VALUES (";
+
+	for(int i = 0; i < A.Size(); i++)
+	{
+		if(i + 1 != A.Size())
+		{
+			QS << "?, ";
+		}
+	}
+
 	try
 	{
-		ps = pConnection->prepareStatement(Q);
-		for(int index = 0; index < AN; ++index)
+		pPS = pConnection->prepareStatement(QS.str());
+
+		for (int i = 0; i < A.Size(); i++)
 		{
-			switch((A + index)->Type())
+			std::any V = A.GetValue(i);
+			if(V.type() == typeid(std::string))
 			{
-			case SQL_TYPE_STRING:
-			{
-				ps->setString(index + 1, (const char *)(((SSqlString *)(A + index))->Get()));
-				dbg_msg("sql", "here str");
-				break;
+				pPS->setString(i + 1, std::any_cast<std::string>(V).c_str());
 			}
-			case SQL_TYPE_BLOB:
+			else if(A.GetValue(i).type() == typeid(std::istream *))
 			{
-				ps->setBlob(index + 1, (std::istream *)((SSqlBlob *)(A + index)->Get()));
-				dbg_msg("sql", "here blob");
-				break;
+				pPS->setBlob(i + 1, std::any_cast<std::istream *>(V));
 			}
-			case SQL_TYPE_INT:
+			else if(A.GetValue(i).type() == typeid(int))
 			{
-				ps->setInt(index + 1, (int)((size_t)(A + index)->Get())); // warning C4311: 'type cast': pointer truncation from 'void *' to 'int'
-				break;
-			}
-			default:
-				dbg_msg("sql", "here ????");
-				break;
+				pPS->setInt(i + 1, std::any_cast<int>(V));
 			}
 		}
 
-		ps->execute();
+		//for(int index = 0; index < AN; ++index)
+		//{
+		//	if(A->type().name() )
+		//	{
+		//	case SQL_TYPE_STRING:
+		//	{
+		//		ps->setString(index + 1, (const char *)(((SSqlString *)(A + index))->Get()));
+		//		dbg_msg("sql", "here str");
+		//		break;
+		//	}
+		//	case SQL_TYPE_BLOB:
+		//	{
+		//		ps->setBlob(index + 1, (std::istream *)((SSqlBlob *)(A + index)->Get()));
+		//		dbg_msg("sql", "here blob");
+		//		break;
+		//	}
+		//	case SQL_TYPE_INT:
+		//	{
+		//		ps->setInt(index + 1, (int)((size_t)(A + index)->Get())); // warning C4311: 'type cast': pointer truncation from 'void *' to 'int'
+		//		break;
+		//	}
+		//	default:
+		//		dbg_msg("sql", "here ????");
+		//		break;
+		//	}
+		//}
 
-		delete ps;
+		pPS->execute();
+
+		delete pPS;
 	}
 	catch(SQLException &e)
 	{

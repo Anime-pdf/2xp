@@ -83,28 +83,27 @@ CAccount *CAccount::Register(const char *Login, const char *Password, int &State
 	}
 
 	{
-		struct membuf : std::streambuf
 		{
-			membuf(char *d, size_t s)
+			struct membuf : std::streambuf
 			{
-				setg(d, d, d + s - 1); //  little trolling
-			}
-		};
-
-		char aSalt[25] = {0};
-		secure_random_password(aSalt, sizeof(aSalt), 24);
-
-		char HashP[65];
-		str_copy(HashP, Hash(sqlstr::CSqlString<32>(Password).cstr(), aSalt).c_str(), sizeof(HashP));
-
-		SSqlArg Arguments[3] =
-			{
-				SSqlString(ClearLogin),
-				SSqlBlob(&std::istream(&membuf(HashP, sizeof(HashP)))),
-				SSqlBlob(&std::istream(&membuf(aSalt, sizeof(aSalt))))
+				membuf(char *d, size_t s)
+				{
+					setg(d, d, d + s - 1); //  little trolling
+				}
 			};
 
-		SJK.SPS("INSERT INTO accounts (login, password, salt) VALUES (?, ?, ?)", 3, Arguments);
+			char aSalt[25] = {0};
+			secure_random_password(aSalt, sizeof(aSalt), 24);
+
+			char HashP[65];
+			str_copy(HashP, Hash(sqlstr::CSqlString<32>(Password).cstr(), aSalt).c_str(), sizeof(HashP));
+
+			SqlArgs Args(3);
+			Args.Add("login", std::any(std::string(ClearLogin)));
+			Args.Add("password", std::any(&std::istream(&membuf(HashP, sizeof(HashP)))));
+			Args.Add("salt", std::any(&std::istream(&membuf(aSalt, sizeof(aSalt)))));
+			SJK.SPS("accounts", Args);
+		}
 
 		ResultPtr pRes = SJK.SSD("id", "accounts", "WHERE login = '%s'", ClearLogin);
 

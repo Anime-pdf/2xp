@@ -6,7 +6,7 @@
 #include <game/server/player.h>
 #include <game/version.h>
 
-#define GAME "2XP"
+#define GAME "2xp"
 
 CGameControllerDDRace::CGameControllerDDRace(class CGameContext *pGameServer) :
 	IGameController(pGameServer), m_pInitResult(nullptr)
@@ -43,7 +43,7 @@ void CGameControllerDDRace::OnPlayerConnect(CPlayer *pPlayer)
 		str_format(aBuf, sizeof(aBuf), "'%s' entered and joined the %s", Server()->ClientName(ClientID), GetTeamName(pPlayer->GetTeam()));
 		GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf, -1, CGameContext::CHAT_SIX);
 
-		GameServer()->SendChatTarget(ClientID, "2XP Mod. Version: " GAME_VERSION);
+		GameServer()->SendChatTarget(ClientID, "2xp Mod. Version: " GAME_VERSION);
 		GameServer()->SendChatTarget(ClientID, "Based on DDNet (ddnet.tw)");
 	}
 }

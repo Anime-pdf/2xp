@@ -39,7 +39,7 @@ void CDoor::ResetCollision()
 		else
 			GameServer()->Collision()->SetDCollisionAt(
 				m_Pos.x + (m_Direction.x * i),
-				m_Pos.y + (m_Direction.y * i), TILE_STOPA, 0 /*Flags*/,
+				m_Pos.y + (m_Direction.y * i), TILE_NOHOOK, 0 /*Flags*/,
 				m_Number);
 	}
 }

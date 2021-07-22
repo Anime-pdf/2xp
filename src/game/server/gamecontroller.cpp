@@ -517,7 +517,6 @@ bool IGameController::HandleWarmup(int Seconds)
 		else
 		{
 			DoWarmup(0);
-			return false;
 		}
 	}
 
@@ -567,7 +566,7 @@ void IGameController::Snap(int SnappingClient)
 
 	pGameInfoObj->m_GameFlags = m_GameFlags;
 	pGameInfoObj->m_GameStateFlags = 0;
-	if(m_GameOverTick > -1)
+	if(m_GameOverTick == GCS_ROUND_END)
 		pGameInfoObj->m_GameStateFlags |= GAMESTATEFLAG_GAMEOVER;
 	if(m_SuddenDeath)
 		pGameInfoObj->m_GameStateFlags |= GAMESTATEFLAG_SUDDENDEATH;
@@ -584,14 +583,10 @@ void IGameController::Snap(int SnappingClient)
 		return;
 
 	pGameInfoEx->m_Flags =
-		GAMEINFOFLAG_ALLOW_EYE_WHEEL |
-		GAMEINFOFLAG_PREDICT_DDRACE |
 		GAMEINFOFLAG_PREDICT_DDRACE_TILES |
-		GAMEINFOFLAG_ENTITIES_DDNET |
 		GAMEINFOFLAG_UNLIMITED_AMMO |
 		GAMEINFOFLAG_GAMETYPE_PLUS |
-		GAMEINFOFLAG_ENTITIES_DDRACE |
-		GAMEINFOFLAG_ENTITIES_RACE;
+		GAMEINFOFLAG_ENTITIES_DDRACE;
 	pGameInfoEx->m_Flags2 = 0;
 	pGameInfoEx->m_Version = GAMEINFO_CURVERSION;
 

@@ -4,39 +4,52 @@
 #include <boost/scoped_ptr.hpp>
 #include <cppconn/statement.h>
 #include <cppconn/prepared_statement.h>
+
+#include <base/tl/array.h>
+
 #include <functional>
+#include <map>
+#include <any>
 
 using namespace sql;
 #define SJK CConnectionPool::GetInstance()
 typedef std::unique_ptr<ResultSet> ResultPtr;
 
-
-// shittiest way to work with but
-
-enum
+template <typename T, typename R>
+struct SPseudoMap
 {
-	SQL_TYPE_STRING,
-	SQL_TYPE_BLOB,
-	SQL_TYPE_INT
+	SPseudoMap(int Size)
+	{
+		Keys.set_size(Size);
+		Values.set_size(Size);
+	}
+
+	void Add(T Key, R Value)
+	{
+		Keys.add(Key);
+		Values.add(Value);
+	}
+
+	T GetKey(int Index) const
+	{
+		return Keys[Index];
+	}
+
+	R GetValue(int Index) const
+	{
+		return Values[Index];
+	}
+
+	int Size() const
+	{
+		return Keys.size();
+	}
+
+	array<T> Keys;
+	array<R> Values;
 };
 
-struct SSqlArg
-{
-	int _Type;
-	void *_Data;
-	virtual int Type() const { return _Type; }
-	virtual void *Get() const { return _Data; }
-};
-
-struct SSqlString : public SSqlArg
-{
-	SSqlString(const char *S) { _Data = (void *)S; _Type = SQL_TYPE_STRING; }
-};
-
-struct SSqlBlob : public SSqlArg
-{
-	SSqlBlob(std::istream *S) { _Data = (void *)S; _Type = SQL_TYPE_BLOB; }
-};
+typedef SPseudoMap<std::string, std::any> SqlArgs;
 
 class CConnectionPool 
 {
@@ -80,8 +93,7 @@ public:
 	// Asynchronous SELECT data suspended
 	void ASDS(int Milliseconds, std::function<void(ResultPtr)> func, const char *Select, const char *Table, const char *Buffer = "", ...);
 
-	// std::unique_ptr<PreparedStatement> SPS(const char *Q); // wtf is that, do you really want to use it
-	void SPS(const char *Q, int AN, SSqlArg* A); // wtf is that, do you really want to use it
+	void SPS(const char *T, SqlArgs A); // wtf is that, do you really want to use it
 };
 
 #endif
