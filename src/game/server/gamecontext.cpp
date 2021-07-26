@@ -143,7 +143,6 @@ void CGameContext::FillAntibot(CAntibotRoundData *pData)
 			str_copy(pChar->m_aName, Server()->ClientName(i), sizeof(pChar->m_aName));
 			CCharacter *pGameChar = m_apPlayers[i]->GetCharacter();
 			pChar->m_Alive = (bool)pGameChar;
-			pChar->m_Pause = m_apPlayers[i]->IsPaused();
 			pChar->m_Team = m_apPlayers[i]->GetTeam();
 			if(pGameChar)
 			{
@@ -216,7 +215,7 @@ void CGameContext::CreateExplosion(vec2 Pos, int Owner, int Weapon, bool NoDamag
 		if(!(int)Dmg)
 			continue;
 
-		if((GetPlayerChar(Owner) ? !(GetPlayerChar(Owner)->m_Hit & CCharacter::DISABLE_HIT_GRENADE) : g_Config.m_SvHit || NoDamage) || Owner == apEnts[i]->GetPlayer()->GetCID())
+		if((GetPlayerChar(Owner) && !(GetPlayerChar(Owner)->m_Hit & CCharacter::DISABLE_HIT_GRENADE) || NoDamage) || Owner == apEnts[i]->GetPlayer()->GetCID())
 		{
 			apEnts[i]->TakeDamage(ForceDir * Dmg * 2, (int)Dmg, Owner, Weapon);
 		}
@@ -717,19 +716,13 @@ void CGameContext::OnClientEnter(int ClientID)
 	if(Server()->IsSixup(ClientID))
 	{
 		{
+			// DON'T SUPPORT 0.7, TODO: support 0.7
 			protocol7::CNetMsg_Sv_GameInfo Msg;
 			Msg.m_GameFlags = protocol7::GAMEFLAG_RACE;
 			Msg.m_MatchCurrent = 1;
 			Msg.m_MatchNum = 0;
 			Msg.m_ScoreLimit = 0;
 			Msg.m_TimeLimit = 0;
-			Server()->SendPackMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_NORECORD, ClientID);
-		}
-
-		// /team is essential
-		{
-			protocol7::CNetMsg_Sv_CommandInfoRemove Msg;
-			Msg.m_Name = "team";
 			Server()->SendPackMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_NORECORD, ClientID);
 		}
 
@@ -740,8 +733,6 @@ void CGameContext::OnClientEnter(int ClientID)
 				continue;
 
 			const char *pName = pCmd->m_pName;
-			if(!str_comp(pCmd->m_pName, "r"))
-				pName = "rescue";
 
 			protocol7::CNetMsg_Sv_CommandInfo Msg;
 			Msg.m_Name = pName;
@@ -845,15 +836,8 @@ bool CGameContext::OnClientDataPersist(int ClientID, void *pData)
 
 void CGameContext::OnClientConnected(int ClientID, void *pData)
 {
-	CPersistentClientData *pPersistentData = (CPersistentClientData *)pData;
-	bool Spec = false;
-	if(pPersistentData)
-	{
-		Spec = pPersistentData->m_IsSpectator;
-	}
-
 	// Check which team the player should be on
-	const int StartTeam = (Spec || g_Config.m_SvTournamentMode) ? TEAM_SPECTATORS : m_pController->GetAutoTeam(ClientID);
+	const int StartTeam = m_pController->GetAutoTeam(ClientID);
 
 	if(!m_apPlayers[ClientID])
 		m_apPlayers[ClientID] = new(ClientID) CPlayer(this, ClientID, StartTeam);
@@ -958,7 +942,7 @@ bool CGameContext::OnClientDDNetVersionKnown(int ClientID)
 
 	CPlayer *pPlayer = m_apPlayers[ClientID];
 	if(ClientVersion >= VERSION_DDNET_GAMETICK)
-		pPlayer->m_TimerType = g_Config.m_SvDefaultTimerType;
+		pPlayer->m_TimerType = 0;
 
 	// And report correct tunings.
 	if(ClientVersion >= VERSION_DDNET_EXTRATUNES)
@@ -1293,15 +1277,10 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 			// Switch team on given client and kill/respawn him
 			if(m_pController->CanJoinTeam(pMsg->m_Team, ClientID))
 			{
-				if(pPlayer->IsPaused())
-					SendChatTarget(ClientID, "Use /pause first then you can kill");
-				else
-				{
-					if(pPlayer->GetTeam() == TEAM_SPECTATORS || pMsg->m_Team == TEAM_SPECTATORS)
-						VoteManager()->SetUpdating(true);
-					m_pController->DoTeamChange(pPlayer, pMsg->m_Team);
-					pPlayer->m_TeamChangeTick = Server()->Tick();
-				}
+				if(pPlayer->GetTeam() == TEAM_SPECTATORS || pMsg->m_Team == TEAM_SPECTATORS)
+					VoteManager()->SetUpdating(true);
+				m_pController->DoTeamChange(pPlayer, pMsg->m_Team);
+				pPlayer->m_TeamChangeTick = Server()->Tick();
 			}
 			else
 			{
@@ -1506,8 +1485,6 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 		else if(MsgID == NETMSGTYPE_CL_KILL && !m_World.m_Paused)
 		{
 			if(pPlayer->m_LastKill && pPlayer->m_LastKill + Server()->TickSpeed() * g_Config.m_SvKillDelay > Server()->Tick())
-				return;
-			if(pPlayer->IsPaused())
 				return;
 
 			CCharacter *pChr = pPlayer->GetCharacter();
@@ -2020,24 +1997,11 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 		Tuning()->Set("shotgun_curvature", 0);
 	}
 
-	if(g_Config.m_SvDDRaceTuneReset)
-	{
-		g_Config.m_SvHit = 1;
-		g_Config.m_SvEndlessDrag = 0;
-		g_Config.m_SvOldLaser = 0;
-		g_Config.m_SvTeam = 1;
-		g_Config.m_SvShowOthersDefault = 0;
-
-		if(Collision()->m_NumSwitchers > 0)
-			for(int i = 0; i < Collision()->m_NumSwitchers + 1; ++i)
-				Collision()->m_pSwitchers[i].m_Initial = true;
-	}
-
 	Console()->ExecuteFile(g_Config.m_SvResetFile, -1);
 
 	LoadMapSettings();
 
-	m_pController = new CGameControllerDDRace(this);
+	m_pController = new CGCTXP(this);
 
 	m_TeeHistorianActive = g_Config.m_SvTeeHistorian;
 	if(m_TeeHistorianActive)
@@ -2121,25 +2085,10 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 		{
 			int Index = pTiles[y * pTileMap->m_Width + x].m_Index;
 
-			if(Index == TILE_OLDLASER)
-			{
-				g_Config.m_SvOldLaser = 1;
-				dbg_msg("game_layer", "found old laser tile");
-			}
-			else if(Index == TILE_NPC)
+			if(Index == TILE_NPC)
 			{
 				m_Tuning.Set("player_collision", 0);
 				dbg_msg("game_layer", "found no collision tile");
-			}
-			else if(Index == TILE_EHOOK)
-			{
-				g_Config.m_SvEndlessDrag = 1;
-				dbg_msg("game_layer", "found unlimited hook time tile");
-			}
-			else if(Index == TILE_NOHIT)
-			{
-				g_Config.m_SvHit = 0;
-				dbg_msg("game_layer", "found no weapons hitting others tile");
 			}
 			else if(Index == TILE_NPH)
 			{
@@ -2157,25 +2106,11 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 			if(pFront)
 			{
 				Index = pFront[y * pTileMap->m_Width + x].m_Index;
-				if(Index == TILE_OLDLASER)
-				{
-					g_Config.m_SvOldLaser = 1;
-					dbg_msg("front_layer", "found old laser tile");
-				}
-				else if(Index == TILE_NPC)
+
+				if(Index == TILE_NPC)
 				{
 					m_Tuning.Set("player_collision", 0);
 					dbg_msg("front_layer", "found no collision tile");
-				}
-				else if(Index == TILE_EHOOK)
-				{
-					g_Config.m_SvEndlessDrag = 1;
-					dbg_msg("front_layer", "found unlimited hook time tile");
-				}
-				else if(Index == TILE_NOHIT)
-				{
-					g_Config.m_SvHit = 0;
-					dbg_msg("front_layer", "found no weapons hitting others tile");
 				}
 				else if(Index == TILE_NPH)
 				{

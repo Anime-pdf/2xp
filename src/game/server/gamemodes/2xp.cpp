@@ -8,31 +8,31 @@
 
 #define GAME "2xp"
 
-CGameControllerDDRace::CGameControllerDDRace(class CGameContext *pGameServer) :
-	IGameController(pGameServer), m_pInitResult(nullptr)
+CGCTXP::CGCTXP(class CGameContext *pGameServer) :
+	IGameController(pGameServer)
 {
 	m_pGameType = GAME;
 
 	InitTeleporter();
 }
 
-CGameControllerDDRace::~CGameControllerDDRace()
+CGCTXP::~CGCTXP()
 {
 	// Nothing to clean
 }
 
-void CGameControllerDDRace::OnCharacterSpawn(CCharacter *pChr)
+void CGCTXP::OnCharacterSpawn(CCharacter *pChr)
 {
 	IGameController::OnCharacterSpawn(pChr);
 	pChr->SetTeleports(&m_TeleOuts, &m_TeleCheckOuts);
 }
 
-void CGameControllerDDRace::HandleCharacterTiles(CCharacter *pChr, int MapIndex)
+void CGCTXP::HandleCharacterTiles(CCharacter *pChr, int MapIndex)
 {
 
 }
 
-void CGameControllerDDRace::OnPlayerConnect(CPlayer *pPlayer)
+void CGCTXP::OnPlayerConnect(CPlayer *pPlayer)
 {
 	IGameController::OnPlayerConnect(pPlayer);
 	int ClientID = pPlayer->GetCID();
@@ -48,19 +48,19 @@ void CGameControllerDDRace::OnPlayerConnect(CPlayer *pPlayer)
 	}
 }
 
-void CGameControllerDDRace::OnPlayerDisconnect(CPlayer *pPlayer, const char *pReason)
+void CGCTXP::OnPlayerDisconnect(CPlayer *pPlayer, const char *pReason)
 {
 	int ClientID = pPlayer->GetCID();
 
 	IGameController::OnPlayerDisconnect(pPlayer, pReason);
 }
 
-void CGameControllerDDRace::Tick()
+void CGCTXP::Tick()
 {
 	IGameController::Tick();
 }
 
-void CGameControllerDDRace::DoTeamChange(class CPlayer *pPlayer, int Team)
+void CGCTXP::DoTeamChange(class CPlayer *pPlayer, int Team)
 {
 	Team = ClampTeam(Team);
 	if(Team == pPlayer->GetTeam())
@@ -71,7 +71,7 @@ void CGameControllerDDRace::DoTeamChange(class CPlayer *pPlayer, int Team)
 	IGameController::DoTeamChange(pPlayer, Team);
 }
 
-void CGameControllerDDRace::InitTeleporter()
+void CGCTXP::InitTeleporter()
 {
 	if(!GameServer()->Collision()->Layers()->TeleLayer())
 		return;

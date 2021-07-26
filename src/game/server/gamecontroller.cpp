@@ -242,7 +242,7 @@ bool IGameController::OnEntity(int Index, vec2 Pos, int Layer, int Flags, int Nu
 			true, //Freeze
 			true, //Explosive
 			0, //Force
-			(g_Config.m_SvShotgunBulletSound) ? SOUND_GRENADE_EXPLODE : -1, //SoundImpact
+			SOUND_GRENADE_EXPLODE, //SoundImpact
 			Layer,
 			Number);
 		bullet->SetBouncing(2 - (Dir % 2));
@@ -455,6 +455,7 @@ void IGameController::StartRound()
 void IGameController::ChangeMap(const char *pToMap)
 {
 	str_copy(g_Config.m_SvMap, pToMap, sizeof(g_Config.m_SvMap));
+	EndRound();
 }
 
 void IGameController::OnReset()
@@ -546,10 +547,13 @@ void IGameController::Tick()
 	if(HandleWarmup(30))
 		StartRound();
 
+	DoWinCheck();
+
 	if(m_GameOverTick > -1)
 	{
 		if(Server()->Tick() > m_GameOverTick + Server()->TickSpeed() * 3) // g_Config.m_SvGameOver
 		{
+			GameServer()->m_World.m_Paused = true;
 			m_GameOverTick = GCS_ROUND_END;
 			m_RoundCount++;
 		}
@@ -566,7 +570,7 @@ void IGameController::Snap(int SnappingClient)
 
 	pGameInfoObj->m_GameFlags = m_GameFlags;
 	pGameInfoObj->m_GameStateFlags = 0;
-	if(m_GameOverTick == GCS_ROUND_END)
+	if(m_GameOverTick > -1)
 		pGameInfoObj->m_GameStateFlags |= GAMESTATEFLAG_GAMEOVER;
 	if(m_SuddenDeath)
 		pGameInfoObj->m_GameStateFlags |= GAMESTATEFLAG_SUDDENDEATH;
@@ -633,7 +637,9 @@ int IGameController::GetAutoTeam(int NotThisID)
 
 bool IGameController::CanJoinTeam(int Team, int NotThisID)
 {
-	if(GameServer()->m_apPlayers[NotThisID] && GameServer()->m_apPlayers[NotThisID]->GetGameTeam() == TXP_TEAM_DIED)
+	if(!GameServer()->m_apPlayers[NotThisID])
+		return false;
+	else if(GameServer()->m_apPlayers[NotThisID]->GetGameTeam() == TXP_TEAM_DIED || !GameServer()->m_apPlayers[NotThisID]->GetAccount())
 		return false;
 	return true;
 }
@@ -660,4 +666,9 @@ void IGameController::DoTeamChange(CPlayer *pPlayer, int Team)
 	//GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", aBuf);
 
 	// OnPlayerInfoChange(pPlayer);
+}
+
+void IGameController::DoWinCheck()
+{
+
 }

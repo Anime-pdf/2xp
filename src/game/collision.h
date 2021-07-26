@@ -120,6 +120,7 @@ private:
 	class CSwitchTile *m_pSwitch;
 	class CTuneTile *m_pTune;
 	class CDoorTile *m_pDoor;
+public:
 	struct SSwitchers
 	{
 		bool m_Status;
@@ -127,8 +128,6 @@ private:
 		int m_EndTick;
 		int m_Type;
 	};
-
-public:
 	SSwitchers *m_pSwitchers;
 };
 

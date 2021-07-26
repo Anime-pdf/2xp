@@ -595,13 +595,6 @@ generate_source7("src/game/generated/protocol7.h" "network_header")
 
 generate_maps("src/game/generated/protocolglue.h")
 
-add_custom_command(OUTPUT "src/game/generated/wordlist.h"
-  COMMAND ${PYTHON_EXECUTABLE} scripts/wordlist.py > ${PROJECT_BINARY_DIR}/src/game/generated/wordlist.h
-  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-  DEPENDS
-    scripts/wordlist.py
-)
-
 ########################################################################
 # SHARED
 ########################################################################

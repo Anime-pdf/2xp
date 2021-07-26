@@ -18,38 +18,47 @@ CDoor::CDoor(CGameWorld *pGameWorld, vec2 Pos, float Rotation, int Length,
 	m_Direction = vec2(sin(Rotation), cos(Rotation));
 	vec2 To = Pos + normalize(m_Direction) * m_Length;
 
+	m_PreviousStatus = GameServer()->Collision()->m_pSwitchers[Number].m_Status;
+
 	GameServer()->Collision()->IntersectNoLaser(Pos, To, &this->m_To, 0);
 	ResetCollision();
 	GameWorld()->InsertEntity(this);
 }
 
-void CDoor::Open(int Tick, bool ActivatedTeam[])
+void CDoor::Open(int Tick)
 {
 	m_EvalTick = Server()->Tick();
+	Open();
 }
 
 void CDoor::ResetCollision()
 {
 	for(int i = 0; i < m_Length - 1; i++)
 	{
-		vec2 CurrentPos(m_Pos.x + (m_Direction.x * i),
-			m_Pos.y + (m_Direction.y * i));
-		if(GameServer()->Collision()->CheckPoint(CurrentPos) || GameServer()->Collision()->GetTile(m_Pos.x, m_Pos.y) || GameServer()->Collision()->GetFTile(m_Pos.x, m_Pos.y))
-			break;
-		else
-			GameServer()->Collision()->SetDCollisionAt(
+		GameServer()->Collision()->SetCollisionAt(
 				m_Pos.x + (m_Direction.x * i),
-				m_Pos.y + (m_Direction.y * i), TILE_NOHOOK, 0 /*Flags*/,
-				m_Number);
+				m_Pos.y + (m_Direction.y * i), TILE_NOHOOK);
 	}
 }
 
-void CDoor::Open(int Team)
+void CDoor::Open()
 {
+	for(int i = 0; i < m_Length - 1; i++)
+	{
+		GameServer()->Collision()->SetCollisionAt(
+				m_Pos.x + (m_Direction.x * i),
+			m_Pos.y + (m_Direction.y * i), TILE_AIR);
+	}
 }
 
-void CDoor::Close(int Team)
+void CDoor::Close()
 {
+	for(int i = 0; i < m_Length - 1; i++)
+	{
+		GameServer()->Collision()->SetCollisionAt(
+				m_Pos.x + (m_Direction.x * i),
+				m_Pos.y + (m_Direction.y * i), TILE_NOHOOK);
+	}
 }
 
 void CDoor::Reset()
@@ -58,6 +67,12 @@ void CDoor::Reset()
 
 void CDoor::Tick()
 {
+	bool CurrentStatus = GameServer()->Collision()->m_pSwitchers[m_Number].m_Status;
+	if (CurrentStatus != m_PreviousStatus)
+	{
+		CurrentStatus ? Close() : Open();
+		m_PreviousStatus = CurrentStatus;
+	}
 }
 
 void CDoor::Snap(int SnappingClient)
@@ -77,7 +92,7 @@ void CDoor::Snap(int SnappingClient)
 	CCharacter *Char = GameServer()->GetPlayerChar(SnappingClient);
 	int Tick = (Server()->Tick() % Server()->TickSpeed()) % 11;
 
-	if(SnappingClient > -1 && (GameServer()->m_apPlayers[SnappingClient]->GetTeam() == -1 || GameServer()->m_apPlayers[SnappingClient]->IsPaused()) && GameServer()->m_apPlayers[SnappingClient]->m_SpectatorID != SPEC_FREEVIEW)
+	if(SnappingClient > -1 && GameServer()->m_apPlayers[SnappingClient]->GetTeam() == TEAM_SPECTATORS && GameServer()->m_apPlayers[SnappingClient]->m_SpectatorID != SPEC_FREEVIEW)
 		Char = GameServer()->GetPlayerChar(GameServer()->m_apPlayers[SnappingClient]->m_SpectatorID);
 
 	if(Char == 0)

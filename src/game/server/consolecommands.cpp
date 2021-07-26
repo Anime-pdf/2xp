@@ -234,7 +234,7 @@ void CGameContext::ConToTeleporter(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
 	unsigned int TeleTo = pResult->GetInteger(0);
-	CGameControllerDDRace *pGameControllerDDRace = (CGameControllerDDRace *)pSelf->m_pController;
+	CGCTXP *pGameControllerDDRace = (CGCTXP *)pSelf->m_pController;
 
 	if(pGameControllerDDRace->m_TeleOuts[TeleTo - 1].size())
 	{

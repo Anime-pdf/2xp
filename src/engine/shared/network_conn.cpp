@@ -393,26 +393,8 @@ int CNetConnection::Update()
 {
 	int64 Now = time_get();
 
-	if(State() == NET_CONNSTATE_ERROR && m_TimeoutSituation && (Now - m_LastRecvTime) > time_freq() * g_Config.m_ConnTimeoutProtection)
-	{
-		m_TimeoutSituation = false;
-		SetError("Timeout Protection over");
-	}
-
 	if(State() == NET_CONNSTATE_OFFLINE || State() == NET_CONNSTATE_ERROR)
 		return 0;
-
-	m_TimeoutSituation = false;
-
-	// check for timeout
-	if(State() != NET_CONNSTATE_OFFLINE &&
-		State() != NET_CONNSTATE_CONNECT &&
-		(Now - m_LastRecvTime) > time_freq() * g_Config.m_ConnTimeout)
-	{
-		m_State = NET_CONNSTATE_ERROR;
-		SetError("Timeout");
-		m_TimeoutSituation = true;
-	}
 
 	// fix resends
 	if(m_Buffer.First())
@@ -420,7 +402,7 @@ int CNetConnection::Update()
 		CNetChunkResend *pResend = m_Buffer.First();
 
 		// check if we have some really old stuff laying around and abort if not acked
-		if(Now - pResend->m_FirstSendTime > time_freq() * g_Config.m_ConnTimeout)
+		if(Now - pResend->m_FirstSendTime > time_freq() * 15)
 		{
 			m_State = NET_CONNSTATE_ERROR;
 			char aBuf[512];

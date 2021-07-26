@@ -138,6 +138,8 @@ public:
 	//spawn
 	virtual bool CanSpawn(int Team, vec2 *pPos);
 
+	virtual void DoWinCheck();
+
 	virtual void DoTeamChange(class CPlayer *pPlayer, int Team);
 	/*
 

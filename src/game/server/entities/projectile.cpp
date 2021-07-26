@@ -120,13 +120,13 @@ void CProjectile::Tick()
 
 	CCharacter *pTargetChr = 0;
 
-	if(pOwnerChar ? !(pOwnerChar->m_Hit & CCharacter::DISABLE_HIT_GRENADE) : g_Config.m_SvHit)
+	if(pOwnerChar && !(pOwnerChar->m_Hit & CCharacter::DISABLE_HIT_GRENADE))
 		pTargetChr = GameServer()->m_World.IntersectCharacter(PrevPos, ColPos, m_Freeze ? 1.0f : 6.0f, ColPos, pOwnerChar, m_Owner);
 
 	if(m_LifeSpan > -1)
 		m_LifeSpan--;
 
-	if(((pTargetChr && (pOwnerChar ? !(pOwnerChar->m_Hit & CCharacter::DISABLE_HIT_GRENADE) : g_Config.m_SvHit)) || Collide))
+	if(((pTargetChr && (pOwnerChar && !(pOwnerChar->m_Hit & CCharacter::DISABLE_HIT_GRENADE))) || Collide))
 	{
 		if(m_Explosive /*??*/ && (!pTargetChr || (pTargetChr && (!m_Freeze || (m_Type == WEAPON_SHOTGUN && Collide)))))
 		{
@@ -232,7 +232,7 @@ void CProjectile::Tick()
 
 	int x = GameServer()->Collision()->GetIndex(PrevPos, CurPos);
 	int z = GameServer()->Collision()->IsTeleportWeapon(x);
-	CGameControllerDDRace *pControllerDDRace = (CGameControllerDDRace *)GameServer()->m_pController;
+	CGCTXP *pControllerDDRace = (CGCTXP *)GameServer()->m_pController;
 	if(z && pControllerDDRace->m_TeleOuts[z - 1].size())
 	{
 		int TeleOut = GameServer()->m_World.m_Core.RandomOr0(pControllerDDRace->m_TeleOuts[z - 1].size());

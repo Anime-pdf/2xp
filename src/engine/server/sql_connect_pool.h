@@ -24,6 +24,8 @@ struct SPseudoMap
 		Values.set_size(Size);
 	}
 
+	SPseudoMap() {}
+
 	void Add(T Key, R Value)
 	{
 		Keys.add(Key);

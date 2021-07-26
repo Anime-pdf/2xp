@@ -1,27 +1,21 @@
-[![DDraceNetwork](https://ddnet.tw/ddnet-small.png)](https://ddnet.tw) [![](https://github.com/ddnet/ddnet/workflows/Build/badge.svg)](https://github.com/ddnet/ddnet/actions?query=workflow%3ABuild+event%3Apush+branch%3Amaster)
-
-Our own flavor of DDRace, a Teeworlds mod. See the [website](https://ddnet.tw) for more information.
-
-Development discussions happen on #ddnet on Quakenet ([Webchat](http://webchat.quakenet.org/?channels=ddnet&uio=d4)) or on [Discord in the developer channel](https://discord.gg/xsEd9xu).
-
-You can get binary releases on the [DDNet website](https://ddnet.tw/downloads/), find it on [Steam](https://store.steampowered.com/app/412220/DDraceNetwork/) or [install from repository](#installation-from-repository).
+[![2xp](https://github.com/tw-2xp/static-images/blob/main/logos/logo-main.png)]
 
 Cloning
 -------
 
 To clone this repository with full history and external libraries (~350 MB):
 
-    git clone --recursive https://github.com/ddnet/ddnet
+    git clone --recursive https://github.com/tw-2xp/2xp
 
-To clone this repository with full history when you have the necessary libraries on your system already (~220 MB):
+To clone this repository with full history when you have the necessary libraries on your system already:
 
-    git clone https://github.com/ddnet/ddnet
+    git clone https://github.com/tw-2xp/2xp
 
-To clone this repository with history since we moved the libraries to https://github.com/ddnet/ddnet-libs (~40 MB):
+To clone this repository with history since we moved the libraries to https://github.com/tw-2xp/libs:
 
-    git clone --shallow-exclude=included-libs https://github.com/ddnet/ddnet
+    git clone --shallow-exclude=included-libs https://github.com/tw-2xp/2xp
 
-To clone the libraries if you have previously cloned DDNet without them:
+To clone the libraries if you have previously cloned 2xp without them:
 
     git submodule update --init --recursive
 

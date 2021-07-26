@@ -20,7 +20,6 @@ CPlayer::CPlayer(CGameContext *pGameServer, int ClientID, int Team)
 	m_ClientID = ClientID;
 	m_NumInputs = 0;
 	m_Team = Team;
-	m_GameTeam = IGameController::TXP_TEAM_DIED;
 	Reset();
 	GameServer()->Antibot()->OnPlayerInit(m_ClientID);
 }
@@ -44,6 +43,7 @@ void CPlayer::Reset()
 	m_LastActionTick = Server()->Tick();
 	m_TeamChangeTick = Server()->Tick();
 
+	m_pAccount = 0;
 
 	int *pIdMap = Server()->GetIdMap(m_ClientID);
 	for(int i = 1; i < VANILLA_MAX_CLIENTS; i++)
@@ -82,11 +82,8 @@ void CPlayer::Reset()
 	m_ShowDistance = vec2(1200, 800);
 	m_NinjaJetpack = false;
 
-	m_Paused = PAUSE_NONE;
+	m_GameTeam = IGameController::TXP_TEAM_DIED;
 
-	m_GameTeam = IGameController::TXP_TEAM_H;
-
-	m_LastPause = 0;
 	m_Score = 0;
 
 	// Variable initialized:
@@ -157,12 +154,7 @@ void CPlayer::Tick()
 
 	if(Server()->GetNetErrorString(m_ClientID)[0])
 	{
-		m_Afk = true;
-
-		char aBuf[512];
-		str_format(aBuf, sizeof(aBuf), "'%s' would have timed out, but can use timeout protection now", Server()->ClientName(m_ClientID));
-		GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
-		Server()->ResetNetErrorString(m_ClientID);
+		Server()->Kick(m_ClientID, "Net error, try to reconnect");
 	}
 
 	if(!GameServer()->m_World.m_Paused)
@@ -176,14 +168,7 @@ void CPlayer::Tick()
 		{
 			if(m_pCharacter->IsAlive())
 			{
-				ProcessPause();
-				if(!m_Paused)
-					m_ViewPos = m_pCharacter->m_Pos;
-			}
-			else if(!m_pCharacter->IsPaused())
-			{
-				delete m_pCharacter;
-				m_pCharacter = 0;
+				m_ViewPos = m_pCharacter->m_Pos;
 			}
 		}
 		else if(m_Spawning)
@@ -226,7 +211,7 @@ void CPlayer::PostTick()
 	}
 
 	// update view pos for spectators
-	if((m_Team == TEAM_SPECTATORS || m_Paused) && m_SpectatorID != SPEC_FREEVIEW && GameServer()->m_apPlayers[m_SpectatorID] && GameServer()->m_apPlayers[m_SpectatorID]->GetCharacter())
+	if(m_Team == TEAM_SPECTATORS && m_SpectatorID != SPEC_FREEVIEW && GameServer()->m_apPlayers[m_SpectatorID] && GameServer()->m_apPlayers[m_SpectatorID]->GetCharacter())
 		m_ViewPos = GameServer()->m_apPlayers[m_SpectatorID]->GetCharacter()->m_Pos;
 }
 
@@ -278,12 +263,9 @@ void CPlayer::Snap(int SnappingClient)
 
 		pPlayerInfo->m_Latency = Latency;
 		pPlayerInfo->m_Score = Score;
-		pPlayerInfo->m_Local = (int)(m_ClientID == SnappingClient && (m_Paused != PAUSE_PAUSED || SnappingClientVersion >= VERSION_DDNET_OLD));
+		pPlayerInfo->m_Local = (int)(m_ClientID == SnappingClient && SnappingClientVersion >= VERSION_DDNET_OLD);
 		pPlayerInfo->m_ClientID = id;
-		pPlayerInfo->m_Team = (SnappingClientVersion < VERSION_DDNET_OLD || m_Paused != PAUSE_PAUSED || m_ClientID != SnappingClient) && m_Paused < PAUSE_SPEC ? m_Team : TEAM_SPECTATORS;
-
-		if(m_ClientID == SnappingClient && m_Paused == PAUSE_PAUSED && SnappingClientVersion < VERSION_DDNET_OLD)
-			pPlayerInfo->m_Team = TEAM_SPECTATORS;
+		pPlayerInfo->m_Team = m_Team;
 	}
 	else
 	{
@@ -302,7 +284,7 @@ void CPlayer::Snap(int SnappingClient)
 		pPlayerInfo->m_Latency = Latency;
 	}
 
-	if(m_ClientID == SnappingClient && (m_Team == TEAM_SPECTATORS || m_Paused))
+	if(m_ClientID == SnappingClient && m_Team == TEAM_SPECTATORS)
 	{
 		if(SnappingClient < 0 || !Server()->IsSixup(SnappingClient))
 		{
@@ -335,28 +317,6 @@ void CPlayer::Snap(int SnappingClient)
 	pDDNetPlayer->m_Flags = 0;
 	if(m_Afk)
 		pDDNetPlayer->m_Flags |= EXPLAYERFLAG_AFK;
-	if(m_Paused == PAUSE_SPEC)
-		pDDNetPlayer->m_Flags |= EXPLAYERFLAG_SPEC;
-	if(m_Paused == PAUSE_PAUSED)
-		pDDNetPlayer->m_Flags |= EXPLAYERFLAG_PAUSED;
-
-	bool ShowSpec = m_pCharacter && m_pCharacter->IsPaused();
-
-	if(SnappingClient >= 0)
-	{
-		CPlayer *pSnapPlayer = GameServer()->m_apPlayers[SnappingClient];
-		ShowSpec = ShowSpec && (pSnapPlayer->GetTeam() == TEAM_SPECTATORS || pSnapPlayer->IsPaused());
-	}
-
-	if(ShowSpec)
-	{
-		CNetObj_SpecChar *pSpecChar = static_cast<CNetObj_SpecChar *>(Server()->SnapNewItem(NETOBJTYPE_SPECCHAR, id, sizeof(CNetObj_SpecChar)));
-		if(!pSpecChar)
-			return;
-
-		pSpecChar->m_X = m_pCharacter->Core()->m_Pos.x;
-		pSpecChar->m_Y = m_pCharacter->Core()->m_Pos.y;
-	}
 }
 
 void CPlayer::FakeSnap()
@@ -377,9 +337,6 @@ void CPlayer::FakeSnap()
 	StrToInts(&pClientInfo->m_Name0, 4, " ");
 	StrToInts(&pClientInfo->m_Clan0, 3, "");
 	StrToInts(&pClientInfo->m_Skin0, 6, "default");
-
-	if(m_Paused != PAUSE_PAUSED)
-		return;
 
 	CNetObj_PlayerInfo *pPlayerInfo = static_cast<CNetObj_PlayerInfo *>(Server()->SnapNewItem(NETOBJTYPE_PLAYERINFO, FakeID, sizeof(CNetObj_PlayerInfo)));
 	if(!pPlayerInfo)
@@ -415,14 +372,8 @@ void CPlayer::OnPredictedInput(CNetObj_PlayerInput *NewInput)
 
 	m_NumInputs++;
 
-	if(m_pCharacter && !m_Paused)
+	if(m_pCharacter)
 		m_pCharacter->OnPredictedInput(NewInput);
-
-	// Magic number when we can hope that client has successfully identified itself
-	if(m_NumInputs == 20 && g_Config.m_SvClientSuggestion[0] != '\0' && GetClientVersion() <= VERSION_DDNET_OLD)
-		GameServer()->SendBroadcast(g_Config.m_SvClientSuggestion, m_ClientID);
-	else if(m_NumInputs == 200 && Server()->IsSixup(m_ClientID))
-		GameServer()->SendBroadcast("This server uses an experimental translation from Teeworlds 0.7 to 0.6.", m_ClientID);
 }
 
 void CPlayer::OnDirectInput(CNetObj_PlayerInput *NewInput)
@@ -437,7 +388,7 @@ void CPlayer::OnDirectInput(CNetObj_PlayerInput *NewInput)
 		return; // we must return if kicked, as player struct is already deleted
 	AfkVoteTimer(NewInput);
 
-	if(((!m_pCharacter && m_Team == TEAM_SPECTATORS) || m_Paused) && m_SpectatorID == SPEC_FREEVIEW)
+	if(!m_pCharacter && m_Team == TEAM_SPECTATORS && m_SpectatorID == SPEC_FREEVIEW)
 		m_ViewPos = vec2(NewInput->m_TargetX, NewInput->m_TargetY);
 
 	if(NewInput->m_PlayerFlags & PLAYERFLAG_CHATTING)
@@ -456,7 +407,7 @@ void CPlayer::OnDirectInput(CNetObj_PlayerInput *NewInput)
 
 	m_PlayerFlags = NewInput->m_PlayerFlags;
 
-	if(m_pCharacter && m_Paused)
+	if(m_pCharacter)
 		m_pCharacter->ResetInput();
 
 	if(!m_pCharacter && m_Team != TEAM_SPECTATORS)
@@ -479,7 +430,7 @@ void CPlayer::OnPredictedEarlyInput(CNetObj_PlayerInput *NewInput)
 	if((m_PlayerFlags & PLAYERFLAG_CHATTING) && (NewInput->m_PlayerFlags & PLAYERFLAG_CHATTING))
 		return;
 
-	if(m_pCharacter && !m_Paused)
+	if(m_pCharacter)
 		m_pCharacter->OnDirectInput(NewInput);
 }
 
@@ -640,32 +591,29 @@ bool CPlayer::AfkTimer(int NewTargetX, int NewTargetY)
 	}
 	else
 	{
-		if(!m_Paused)
+		// not playing, check how long
+		if(m_Sent1stAfkWarning == 0 && m_LastPlaytime < time_get() - time_freq() * (int)(g_Config.m_SvMaxAfkTime * 0.5))
 		{
-			// not playing, check how long
-			if(m_Sent1stAfkWarning == 0 && m_LastPlaytime < time_get() - time_freq() * (int)(g_Config.m_SvMaxAfkTime * 0.5))
-			{
-				str_format(m_pAfkMsg, sizeof(m_pAfkMsg),
-					"You have been afk for %d seconds now. Please note that you get kicked after not playing for %d seconds.",
-					(int)(g_Config.m_SvMaxAfkTime * 0.5),
-					g_Config.m_SvMaxAfkTime);
-				m_pGameServer->SendChatTarget(m_ClientID, m_pAfkMsg);
-				m_Sent1stAfkWarning = 1;
-			}
-			else if(m_Sent2ndAfkWarning == 0 && m_LastPlaytime < time_get() - time_freq() * (int)(g_Config.m_SvMaxAfkTime * 0.9))
-			{
-				str_format(m_pAfkMsg, sizeof(m_pAfkMsg),
-					"You have been afk for %d seconds now. Please note that you get kicked after not playing for %d seconds.",
-					(int)(g_Config.m_SvMaxAfkTime * 0.9),
-					g_Config.m_SvMaxAfkTime);
-				m_pGameServer->SendChatTarget(m_ClientID, m_pAfkMsg);
-				m_Sent2ndAfkWarning = 1;
-			}
-			else if(m_LastPlaytime < time_get() - time_freq() * g_Config.m_SvMaxAfkTime)
-			{
-				m_pGameServer->Server()->Kick(m_ClientID, "Away from keyboard");
-				return true;
-			}
+			str_format(m_pAfkMsg, sizeof(m_pAfkMsg),
+				"You have been afk for %d seconds now. Please note that you get kicked after not playing for %d seconds.",
+				(int)(g_Config.m_SvMaxAfkTime * 0.5),
+				g_Config.m_SvMaxAfkTime);
+			m_pGameServer->SendChatTarget(m_ClientID, m_pAfkMsg);
+			m_Sent1stAfkWarning = 1;
+		}
+		else if(m_Sent2ndAfkWarning == 0 && m_LastPlaytime < time_get() - time_freq() * (int)(g_Config.m_SvMaxAfkTime * 0.9))
+		{
+			str_format(m_pAfkMsg, sizeof(m_pAfkMsg),
+				"You have been afk for %d seconds now. Please note that you get kicked after not playing for %d seconds.",
+				(int)(g_Config.m_SvMaxAfkTime * 0.9),
+				g_Config.m_SvMaxAfkTime);
+			m_pGameServer->SendChatTarget(m_ClientID, m_pAfkMsg);
+			m_Sent2ndAfkWarning = 1;
+		}
+		else if(m_LastPlaytime < time_get() - time_freq() * g_Config.m_SvMaxAfkTime)
+		{
+			m_pGameServer->Server()->Kick(m_ClientID, "Away from keyboard");
+			return true;
 		}
 	}
 	return false;
@@ -720,95 +668,6 @@ void CPlayer::OverrideDefaultEmote(int Emote, int Tick)
 bool CPlayer::CanOverrideDefaultEmote() const
 {
 	return m_LastEyeEmote == 0 || m_LastEyeEmote + (int64)g_Config.m_SvEyeEmoteChangeDelay * Server()->TickSpeed() < Server()->Tick();
-}
-
-void CPlayer::ProcessPause()
-{
-	if(m_ForcePauseTime && m_ForcePauseTime < Server()->Tick())
-	{
-		m_ForcePauseTime = 0;
-		Pause(PAUSE_NONE, true);
-	}
-
-	if(m_Paused == PAUSE_SPEC && !m_pCharacter->IsPaused() && m_pCharacter->IsGrounded() && m_pCharacter->m_Pos == m_pCharacter->m_PrevPos)
-	{
-		m_pCharacter->Pause(true);
-		GameServer()->CreateDeath(m_pCharacter->m_Pos, m_ClientID);
-		GameServer()->CreateSound(m_pCharacter->m_Pos, SOUND_PLAYER_DIE);
-	}
-}
-
-int CPlayer::Pause(int State, bool Force)
-{
-	if(State < PAUSE_NONE || State > PAUSE_SPEC) // Invalid pause state passed
-		return 0;
-
-	if(!m_pCharacter)
-		return 0;
-
-	char aBuf[128];
-	if(State != m_Paused)
-	{
-		// Get to wanted state
-		switch(State)
-		{
-		case PAUSE_PAUSED:
-		case PAUSE_NONE:
-			if(m_pCharacter->IsPaused()) // First condition might be unnecessary
-			{
-				if(!Force && m_LastPause && m_LastPause + (int64)g_Config.m_SvSpecFrequency * Server()->TickSpeed() > Server()->Tick())
-				{
-					GameServer()->SendChatTarget(m_ClientID, "Can't /spec that quickly.");
-					return m_Paused; // Do not update state. Do not collect $200
-				}
-				m_pCharacter->Pause(false);
-				m_ViewPos = m_pCharacter->m_Pos;
-				GameServer()->CreatePlayerSpawn(m_pCharacter->m_Pos);
-			}
-			// fall-thru
-		case PAUSE_SPEC:
-			if(g_Config.m_SvPauseMessages)
-			{
-				str_format(aBuf, sizeof(aBuf), (State > PAUSE_NONE) ? "'%s' speced" : "'%s' resumed", Server()->ClientName(m_ClientID));
-				GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
-			}
-			break;
-		}
-
-		// Update state
-		m_Paused = State;
-		m_LastPause = Server()->Tick();
-
-		// Sixup needs a teamchange
-		protocol7::CNetMsg_Sv_Team Msg;
-		Msg.m_ClientID = m_ClientID;
-		Msg.m_CooldownTick = Server()->Tick();
-		Msg.m_Silent = true;
-		Msg.m_Team = m_Paused ? protocol7::TEAM_SPECTATORS : m_Team;
-
-		GameServer()->Server()->SendPackMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_NORECORD, m_ClientID);
-	}
-
-	return m_Paused;
-}
-
-int CPlayer::ForcePause(int Time)
-{
-	m_ForcePauseTime = Server()->Tick() + Server()->TickSpeed() * Time;
-
-	if(g_Config.m_SvPauseMessages)
-	{
-		char aBuf[128];
-		str_format(aBuf, sizeof(aBuf), "'%s' was force-paused for %ds", Server()->ClientName(m_ClientID), Time);
-		GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
-	}
-
-	return Pause(PAUSE_SPEC, true);
-}
-
-int CPlayer::IsPaused()
-{
-	return m_ForcePauseTime ? m_ForcePauseTime : -1 * m_Paused;
 }
 
 bool CPlayer::IsPlaying()

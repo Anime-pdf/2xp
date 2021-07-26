@@ -71,7 +71,6 @@ public:
 
 	int NeededFaketuning() { return m_NeededFaketuning; }
 	bool IsAlive() const { return m_Alive; }
-	bool IsPaused() const { return m_Paused; }
 	class CPlayer *GetPlayer() { return m_pPlayer; }
 
 private:
@@ -79,7 +78,6 @@ private:
 	class CPlayer *m_pPlayer;
 
 	bool m_Alive;
-	bool m_Paused;
 	int m_NeededFaketuning;
 
 	// weapon info
@@ -170,7 +168,6 @@ public:
 	void SetTeleports(std::map<int, std::vector<vec2>> *pTeleOuts, std::map<int, std::vector<vec2>> *pTeleCheckOuts);
 
 	void FillAntibot(CAntibotCharacterData *pData);
-	void Pause(bool Pause);
 	bool Freeze(int Time);
 	bool Freeze();
 	bool UnFreeze();
@@ -213,11 +210,7 @@ public:
 	int m_MoveRestrictions;
 
 	vec2 m_Intersection;
-	int64 m_LastStartWarning;
-	int64 m_LastRescue;
 	bool m_LastRefillJumps;
-	bool m_LastPenalty;
-	bool m_LastBonus;
 	vec2 m_TeleGunPos;
 	bool m_TeleGunTeleport;
 	bool m_IsBlueTeleGunTeleport;

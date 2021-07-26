@@ -475,33 +475,39 @@ void CConnectionPool::SPS(const char* T, SqlArgs A)
 	ResultPtr pResult = nullptr;
 	PreparedStatement* pPS;
 
-	// TODO: idiotic way, use boost eblan
-	std::stringstream QS;
+	// TODO: idiotic way, use boost or fmt eblan
+	std::string QS;
 
-	QS << "INSERT INTO " << T << "(";
+	QS.append("INSERT INTO ");
+	QS.append(T);
+	QS.append("(");
 
 	for (int i = 0; i < A.Size(); i++)
 	{
-		QS << A.GetKey(i);
+		QS.append(A.GetKey(i));
 		if (i + 1 != A.Size())
 		{
-			QS << ", ";
+			QS.append(", ");
 		}
 	}
 
-	QS << " VALUES (";
+	QS.append(") VALUES (");
 
 	for(int i = 0; i < A.Size(); i++)
 	{
 		if(i + 1 != A.Size())
 		{
-			QS << "?, ";
+			QS.append("?, ");
+		}
+		else
+		{
+			QS.append("?)");
 		}
 	}
 
 	try
 	{
-		pPS = pConnection->prepareStatement(QS.str());
+		pPS = pConnection->prepareStatement(QS.c_str());
 
 		for (int i = 0; i < A.Size(); i++)
 		{

@@ -98,7 +98,7 @@ CAccount *CAccount::Register(const char *Login, const char *Password, int &State
 			char HashP[65];
 			str_copy(HashP, Hash(sqlstr::CSqlString<32>(Password).cstr(), aSalt).c_str(), sizeof(HashP));
 
-			SqlArgs Args(3);
+			SqlArgs Args;
 			Args.Add("login", std::any(std::string(ClearLogin)));
 			Args.Add("password", std::any(&std::istream(&membuf(HashP, sizeof(HashP)))));
 			Args.Add("salt", std::any(&std::istream(&membuf(aSalt, sizeof(aSalt)))));

@@ -134,21 +134,10 @@ private:
 	int m_Team;
 	int m_GameTeam;
 
-	int m_Paused;
-	int64 m_ForcePauseTime;
-	int64 m_LastPause;
-
 	int m_DefEmote;
 	int m_OverrideEmote;
 	int m_OverrideEmoteReset;
 public:
-	enum
-	{
-		PAUSE_NONE = 0,
-		PAUSE_PAUSED,
-		PAUSE_SPEC
-	};
-
 	enum
 	{
 		TIMERTYPE_DEFAULT = -1,
@@ -160,11 +149,6 @@ public:
 	};
 
 	int64 m_FirstVoteTick;
-
-	void ProcessPause();
-	int Pause(int State, bool Force);
-	int ForcePause(int Time);
-	int IsPaused();
 
 	bool IsPlaying();
 	int64 m_Last_KickVote;
