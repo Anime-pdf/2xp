@@ -20,7 +20,6 @@ CDoor::CDoor(CGameWorld *pGameWorld, vec2 Pos, float Rotation, int Length,
 
 	m_PreviousStatus = GameServer()->Collision()->m_pSwitchers[Number].m_Status;
 
-	GameServer()->Collision()->IntersectNoLaser(Pos, To, &this->m_To, 0);
 	ResetCollision();
 	GameWorld()->InsertEntity(this);
 }

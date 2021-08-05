@@ -93,40 +93,6 @@ void CGameContext::ConNinja(IConsole::IResult *pResult, void *pUserData)
 	pSelf->ModifyWeapons(pResult, pUserData, WEAPON_NINJA, false);
 }
 
-void CGameContext::ConEndlessHook(IConsole::IResult *pResult, void *pUserData)
-{
-	CGameContext *pSelf = (CGameContext *)pUserData;
-	if(!CheckClientID(pResult->m_ClientID))
-		return;
-	CCharacter *pChr = pSelf->GetPlayerChar(pResult->m_ClientID);
-	if(pChr)
-	{
-		pChr->SetEndlessHook(true);
-	}
-}
-
-void CGameContext::ConUnEndlessHook(IConsole::IResult *pResult, void *pUserData)
-{
-	CGameContext *pSelf = (CGameContext *)pUserData;
-	if(!CheckClientID(pResult->m_ClientID))
-		return;
-	CCharacter *pChr = pSelf->GetPlayerChar(pResult->m_ClientID);
-	if(pChr)
-	{
-		pChr->SetEndlessHook(false);
-	}
-}
-
-void CGameContext::ConUnDeep(IConsole::IResult *pResult, void *pUserData)
-{
-	CGameContext *pSelf = (CGameContext *)pUserData;
-	if(!CheckClientID(pResult->m_ClientID))
-		return;
-	CCharacter *pChr = pSelf->GetPlayerChar(pResult->m_ClientID);
-	if(pChr)
-		pChr->m_DeepFreeze = false;
-}
-
 void CGameContext::ConShotgun(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
@@ -143,14 +109,6 @@ void CGameContext::ConLaser(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
 	pSelf->ModifyWeapons(pResult, pUserData, WEAPON_LASER, false);
-}
-
-void CGameContext::ConJetpack(IConsole::IResult *pResult, void *pUserData)
-{
-	CGameContext *pSelf = (CGameContext *)pUserData;
-	CCharacter *pChr = pSelf->GetPlayerChar(pResult->m_ClientID);
-	if(pChr)
-		pChr->m_Jetpack = true;
 }
 
 void CGameContext::ConWeapons(IConsole::IResult *pResult, void *pUserData)
@@ -175,14 +133,6 @@ void CGameContext::ConUnLaser(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
 	pSelf->ModifyWeapons(pResult, pUserData, WEAPON_LASER, true);
-}
-
-void CGameContext::ConUnJetpack(IConsole::IResult *pResult, void *pUserData)
-{
-	CGameContext *pSelf = (CGameContext *)pUserData;
-	CCharacter *pChr = pSelf->GetPlayerChar(pResult->m_ClientID);
-	if(pChr)
-		pChr->m_Jetpack = false;
 }
 
 void CGameContext::ConUnWeapons(IConsole::IResult *pResult, void *pUserData)
@@ -555,42 +505,6 @@ void CGameContext::ConMutes(IConsole::IResult *pResult, void *pUserData)
 			(pSelf->m_aMutes[i].m_Expire - pSelf->Server()->Tick()) / pSelf->Server()->TickSpeed(), pSelf->m_aMutes[i].m_aReason);
 		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "mutes", aBuf);
 	}
-}
-
-void CGameContext::ConFreezeHammer(IConsole::IResult *pResult, void *pUserData)
-{
-	CGameContext *pSelf = (CGameContext *)pUserData;
-	int Victim = pResult->GetVictim();
-
-	CCharacter *pChr = pSelf->GetPlayerChar(Victim);
-
-	if(!pChr)
-		return;
-
-	char aBuf[128];
-	str_format(aBuf, sizeof aBuf, "'%s' got freeze hammer!",
-		pSelf->Server()->ClientName(Victim));
-	pSelf->SendChat(-1, CHAT_ALL, aBuf);
-
-	pChr->m_FreezeHammer = true;
-}
-
-void CGameContext::ConUnFreezeHammer(IConsole::IResult *pResult, void *pUserData)
-{
-	CGameContext *pSelf = (CGameContext *)pUserData;
-	int Victim = pResult->GetVictim();
-
-	CCharacter *pChr = pSelf->GetPlayerChar(Victim);
-
-	if(!pChr)
-		return;
-
-	char aBuf[128];
-	str_format(aBuf, sizeof aBuf, "'%s' lost freeze hammer!",
-		pSelf->Server()->ClientName(Victim));
-	pSelf->SendChat(-1, CHAT_ALL, aBuf);
-
-	pChr->m_FreezeHammer = false;
 }
 
 void CGameContext::ConDumpAntibot(IConsole::IResult *pResult, void *pUserData)

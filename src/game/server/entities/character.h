@@ -45,7 +45,6 @@ public:
 
 	void HandleWeapons();
 	void HandleNinja();
-	void HandleJetpack();
 
 	void OnPredictedInput(CNetObj_PlayerInput *pNewInput);
 	void OnDirectInput(CNetObj_PlayerInput *pNewInput);
@@ -65,7 +64,6 @@ public:
 	void GiveWeapon(int Weapon, bool Remove = false);
 	void GiveNinja();
 	void RemoveNinja();
-	void SetEndlessHook(bool Enable);
 
 	void SetEmote(int Emote, int Tick);
 
@@ -150,7 +148,6 @@ private:
 	void SnapCharacter(int SnappingClient, int ID);
 	static bool IsSwitchActiveCb(int Number, void *pUser);
 	void HandleTiles(int Index);
-	float m_Time;
 	int m_LastBroadcast;
 	void DDRaceInit();
 	void HandleSkippableTiles(int Index);
@@ -161,29 +158,12 @@ private:
 	void SendZoneMsgs();
 	IAntibot *Antibot();
 
-	bool m_SetSavePos;
-	bool m_Solo;
-
 public:
 	void SetTeleports(std::map<int, std::vector<vec2>> *pTeleOuts, std::map<int, std::vector<vec2>> *pTeleCheckOuts);
 
 	void FillAntibot(CAntibotCharacterData *pData);
-	bool Freeze(int Time);
-	bool Freeze();
-	bool UnFreeze();
 	void GiveAllWeapons();
 	void ResetPickups();
-	bool m_Super;
-	bool m_SuperJump;
-	bool m_Jetpack;
-	bool m_NinjaJetpack;
-	int m_TeamBeforeSuper;
-	int m_FreezeTime;
-	int m_FreezeTick;
-	bool m_FrozenLastTick;
-	bool m_DeepFreeze;
-	bool m_EndlessHook;
-	bool m_FreezeHammer;
 	enum
 	{
 		HIT_ALL = 0,
@@ -195,25 +175,14 @@ public:
 	int m_Hit;
 	int m_TuneZone;
 	int m_TuneZoneOld;
-	int m_PainSoundTimer;
-	int m_LastMove;
-	int m_StartTime;
 	vec2 m_PrevPos;
 	int m_TeleCheckpoint;
-	int m_CpTick;
-	int m_CpActive;
-	int m_CpLastBroadcast;
-	float m_CpCurrent[25];
-	int m_TileIndex;
-	int m_TileFIndex;
 
 	int m_MoveRestrictions;
 
 	vec2 m_Intersection;
 	bool m_LastRefillJumps;
-	vec2 m_TeleGunPos;
-	bool m_TeleGunTeleport;
-	bool m_IsBlueTeleGunTeleport;
+
 	int m_StrongWeakID;
 
 	int m_SpawnTick;

@@ -184,7 +184,7 @@ void CGameWorld::UpdatePlayerMaps()
 			}
 			// copypasted chunk from character.cpp Snap() follows
 			CCharacter *SnapChar = GameServer()->GetPlayerChar(i);
-			if(SnapChar && !SnapChar->m_Super &&
+			if(SnapChar &&
 				GameServer()->m_apPlayers[i]->GetTeam() != TEAM_SPECTATORS &&
 				(!GameServer()->m_apPlayers[i] ||
 					GameServer()->m_apPlayers[i]->GetClientVersion() == VERSION_VANILLA ||
@@ -382,7 +382,7 @@ void CGameWorld::ReleaseHooked(int ClientID)
 	for(; pChr; pChr = (CCharacter *)pChr->TypeNext())
 	{
 		CCharacterCore *Core = pChr->Core();
-		if(Core->m_HookedPlayer == ClientID && !pChr->m_Super)
+		if(Core->m_HookedPlayer == ClientID)
 		{
 			Core->m_HookedPlayer = -1;
 			Core->m_HookState = HOOK_RETRACTED;

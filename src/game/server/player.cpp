@@ -6,7 +6,6 @@
 #include <game/gamecore.h>
 #include <game/version.h>
 
-#include "entities/character.h"
 #include "gamecontext.h"
 #include "gamecontroller.h"
 
@@ -82,7 +81,7 @@ void CPlayer::Reset()
 	m_ShowDistance = vec2(1200, 800);
 	m_NinjaJetpack = false;
 
-	m_GameTeam = IGameController::TXP_TEAM_DIED;
+	m_GameTeam = IGameController::TXP_TEAM_NONE;
 
 	m_Score = 0;
 
@@ -160,8 +159,8 @@ void CPlayer::Tick()
 	if(!GameServer()->m_World.m_Paused)
 	{
 		int EarliestRespawnTick = m_PreviousDieTick + Server()->TickSpeed() * 3;
-		int RespawnTick = maximum(m_DieTick, EarliestRespawnTick) + 2;
-		if(!m_pCharacter && RespawnTick <= Server()->Tick())
+		int RespawnTick = maximum(m_DieTick, EarliestRespawnTick);
+		if(HasNoCharacter() && RespawnTick <= Server()->Tick())
 			m_Spawning = true;
 
 		if(m_pCharacter)
@@ -410,7 +409,7 @@ void CPlayer::OnDirectInput(CNetObj_PlayerInput *NewInput)
 	if(m_pCharacter)
 		m_pCharacter->ResetInput();
 
-	if(!m_pCharacter && m_Team != TEAM_SPECTATORS)
+	if(HasNoCharacter() && m_Team != TEAM_SPECTATORS)
 		m_Spawning = true;
 
 	// check for activity
@@ -559,8 +558,9 @@ void CPlayer::TryRespawn()
 		return;
 
 	m_Spawning = false;
-	m_pCharacter = new(m_ClientID) CCharacter(&GameServer()->m_World);
 	m_ViewPos = SpawnPos;
+	if(!m_pCharacter)
+		m_pCharacter = new(m_ClientID) CCharacter(&GameServer()->m_World);
 	m_pCharacter->Spawn(this, SpawnPos);
 	GameServer()->CreatePlayerSpawn(SpawnPos);
 }

@@ -7,6 +7,8 @@
 
 #include "character.h"
 
+using namespace mapitems;
+
 CPickup::CPickup(CGameWorld *pGameWorld, int Type, int SubType, int Layer, int Number) :
 	CEntity(pGameWorld, CGameWorld::ENTTYPE_PICKUP, vec2(0, 0), PickupPhysSize)
 {
@@ -31,7 +33,6 @@ void CPickup::Reset()
 
 void CPickup::Tick()
 {
-	Move();
 	/*// wait for respawn
 	if(m_SpawnTick > 0)
 	{
@@ -61,8 +62,6 @@ void CPickup::Tick()
 			switch(m_Type)
 			{
 			case POWERUP_HEALTH:
-				if(pChr->Freeze())
-					GameServer()->CreateSound(m_Pos, SOUND_PICKUP_HEALTH);
 				break;
 
 			case POWERUP_ARMOR:
@@ -178,18 +177,4 @@ void CPickup::Snap(int SnappingClient)
 	}
 	else
 		pP->m_Subtype = m_Subtype;
-}
-
-void CPickup::Move()
-{
-	if(Server()->Tick() % int(Server()->TickSpeed() * 0.15f) == 0)
-	{
-		int Flags;
-		int index = GameServer()->Collision()->IsMover(m_Pos.x, m_Pos.y, &Flags);
-		if(index)
-		{
-			m_Core = GameServer()->Collision()->CpSpeed(index, Flags);
-		}
-		m_Pos += m_Core;
-	}
 }

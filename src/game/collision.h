@@ -55,8 +55,6 @@ public:
 	int GetDTileFlags(int Index) const;
 	int GetDTileNumber(int Index) const;
 	int GetFCollisionAt(float x, float y) const { return GetFTile(round_to_int(x), round_to_int(y)); }
-	int IntersectNoLaser(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pOutBeforeCollision) const;
-	int IntersectNoLaserNW(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pOutBeforeCollision) const;
 	int IntersectAir(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pOutBeforeCollision) const;
 	int GetIndex(int x, int y) const;
 	int GetIndex(vec2 PrevPos, vec2 Pos) const;
@@ -96,16 +94,6 @@ public:
 	int IsSolid(int x, int y) const;
 	bool IsThrough(int x, int y, int xoff, int yoff, vec2 pos0, vec2 pos1) const;
 	bool IsHookBlocker(int x, int y, vec2 pos0, vec2 pos1) const;
-	int IsWallJump(int Index) const;
-	int IsNoLaser(int x, int y) const;
-	int IsFNoLaser(int x, int y) const;
-
-	int IsCheckpoint(int Index) const;
-	int IsFCheckpoint(int Index) const;
-
-	int IsMover(int x, int y, int *pFlags) const;
-
-	vec2 CpSpeed(int index, int Flags = 0) const;
 
 	class CTeleTile *TeleLayer() { return m_pTele; }
 	class CSwitchTile *SwitchLayer() { return m_pSwitch; }

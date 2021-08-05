@@ -52,6 +52,7 @@ public:
 
 	void KillCharacter(int Weapon = WEAPON_GAME);
 	CCharacter *GetCharacter();
+	bool HasNoCharacter() const { return !m_pCharacter || (m_pCharacter && !m_pCharacter->IsAlive()); }
 
 	CAccount *GetAccount() const { return m_pAccount; }
 	void SetAccount(CAccount *pNewAccount) { m_pAccount = pNewAccount; }

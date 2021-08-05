@@ -239,18 +239,13 @@ private:
 	static void ConKillPlayer(IConsole::IResult *pResult, void *pUserData);
 
 	static void ConNinja(IConsole::IResult *pResult, void *pUserData);
-	static void ConEndlessHook(IConsole::IResult *pResult, void *pUserData);
-	static void ConUnEndlessHook(IConsole::IResult *pResult, void *pUserData);
-	static void ConUnDeep(IConsole::IResult *pResult, void *pUserData);
 	static void ConShotgun(IConsole::IResult *pResult, void *pUserData);
 	static void ConGrenade(IConsole::IResult *pResult, void *pUserData);
 	static void ConLaser(IConsole::IResult *pResult, void *pUserData);
-	static void ConJetpack(IConsole::IResult *pResult, void *pUserData);
 	static void ConWeapons(IConsole::IResult *pResult, void *pUserData);
 	static void ConUnShotgun(IConsole::IResult *pResult, void *pUserData);
 	static void ConUnGrenade(IConsole::IResult *pResult, void *pUserData);
 	static void ConUnLaser(IConsole::IResult *pResult, void *pUserData);
-	static void ConUnJetpack(IConsole::IResult *pResult, void *pUserData);
 	static void ConUnWeapons(IConsole::IResult *pResult, void *pUserData);
 	static void ConAddWeapon(IConsole::IResult *pResult, void *pUserData);
 	static void ConRemoveWeapon(IConsole::IResult *pResult, void *pUserData);
@@ -291,8 +286,6 @@ private:
 	static void ConMutes(IConsole::IResult *pResult, void *pUserData);
 
 	static void ConList(IConsole::IResult *pResult, void *pUserData);
-	static void ConFreezeHammer(IConsole::IResult *pResult, void *pUserData);
-	static void ConUnFreezeHammer(IConsole::IResult *pResult, void *pUserData);
 
 	static void ConPlayerLogin(IConsole::IResult *pResult, void *pUserData);
 	static void ConPlayerRegister(IConsole::IResult *pResult, void *pUserData);
