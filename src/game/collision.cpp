@@ -149,7 +149,7 @@ void CCollision::FillAntibot(CAntibotMapData *pMapData)
 	for(int i = 0; i < m_Width * m_Height; i++)
 	{
 		pMapData->m_pTiles[i] = 0;
-		if(m_pTiles[i].m_Index >= TILE_SOLID && m_pTiles[i].m_Index <= TILE_NOLASER)
+		if(m_pTiles[i].m_Index >= TILE_SOLID && m_pTiles[i].m_Index <= TILE_STOPA)
 		{
 			pMapData->m_pTiles[i] = m_pTiles[i].m_Index;
 		}
@@ -580,7 +580,7 @@ bool CCollision::IsThrough(int x, int y, int xoff, int yoff, vec2 pos0, vec2 pos
 	int pos = GetPureMapIndex(x, y);
 	if(m_pFront && (m_pFront[pos].m_Index == TILE_THROUGH_ALL))
 		return true;
-	if(m_pFront && m_pFront[pos].m_Index == TILE_THROUGH_DIR && ((m_pFront[pos].m_Flags == Rotation::R0 && pos0.y > pos1.y) || (m_pFront[pos].m_Flags == Rotation::R90 && pos0.x < pos1.x) || (m_pFront[pos].m_Flags == Rotation::R180 && pos0.y < pos1.y) || (m_pFront[pos].m_Flags == Rotation::R270 && pos0.x > pos1.x)))
+	if(m_pFront && m_pFront[pos].m_Index == TILE_THROUGH_DIR && ((m_pFront[pos].m_Flags == ROTATION_0 && pos0.y > pos1.y) || (m_pFront[pos].m_Flags == ROTATION_90 && pos0.x < pos1.x) || (m_pFront[pos].m_Flags == ROTATION_180 && pos0.y < pos1.y) || (m_pFront[pos].m_Flags == ROTATION_270 && pos0.x > pos1.x)))
 		return true;
 	return false;
 }

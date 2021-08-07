@@ -154,6 +154,7 @@ public:
 
 	enum
 	{
+		TXP_TEAM_NONE,
 		TXP_TEAM_Z, // zombie
 		TXP_TEAM_H, // human
 		TXP_TEAM_DIED

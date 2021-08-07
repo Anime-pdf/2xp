@@ -39,7 +39,6 @@ CProjectile::CProjectile(
 
 	m_Layer = Layer;
 	m_Number = Number;
-	m_Freeze = Freeze;
 
 	m_TuneZone = GameServer()->Collision()->IsTune(GameServer()->Collision()->GetMapIndex(m_Pos));
 
@@ -121,69 +120,20 @@ void CProjectile::Tick()
 	CCharacter *pTargetChr = 0;
 
 	if(pOwnerChar && !(pOwnerChar->m_Hit & CCharacter::DISABLE_HIT_GRENADE))
-		pTargetChr = GameServer()->m_World.IntersectCharacter(PrevPos, ColPos, m_Freeze ? 1.0f : 6.0f, ColPos, pOwnerChar, m_Owner);
+		pTargetChr = GameServer()->m_World.IntersectCharacter(PrevPos, ColPos, 6.0f, ColPos, pOwnerChar, m_Owner);
 
 	if(m_LifeSpan > -1)
 		m_LifeSpan--;
 
 	if(((pTargetChr && (pOwnerChar && !(pOwnerChar->m_Hit & CCharacter::DISABLE_HIT_GRENADE))) || Collide))
 	{
-		if(m_Explosive /*??*/ && (!pTargetChr || (pTargetChr && (!m_Freeze || (m_Type == WEAPON_SHOTGUN && Collide)))))
+		if(m_Explosive /*??*/ && (!pTargetChr || (pTargetChr && (m_Type == WEAPON_SHOTGUN && Collide))))
 		{
 			int Number = 1;
 			for(int i = 0; i < Number; i++)
 			{
 				GameServer()->CreateExplosion(ColPos, m_Owner, m_Type, m_Owner == -1);
 				GameServer()->CreateSound(ColPos, m_SoundImpact);
-			}
-		}
-		else if(m_Freeze)
-		{
-			CCharacter *apEnts[MAX_CLIENTS];
-			int Num = GameWorld()->FindEntities(CurPos, 1.0f, (CEntity **)apEnts, MAX_CLIENTS, CGameWorld::ENTTYPE_CHARACTER);
-			for(int i = 0; i < Num; ++i)
-				if(apEnts[i] && (m_Layer != LAYER_SWITCH || (m_Layer == LAYER_SWITCH && m_Number > 0 && GameServer()->Collision()->m_pSwitchers[m_Number].m_Status)))
-					apEnts[i]->Freeze();
-		}
-
-		if(pOwnerChar && !GameLayerClipped(ColPos) &&
-			((m_Type == WEAPON_GRENADE && pOwnerChar->HasTelegunGrenade()) || (m_Type == WEAPON_GUN && pOwnerChar->HasTelegunGun())))
-		{
-			int MapIndex = GameServer()->Collision()->GetPureMapIndex(pTargetChr ? pTargetChr->m_Pos : ColPos);
-			int TileFIndex = GameServer()->Collision()->GetFTileIndex(MapIndex);
-			bool IsSwitchTeleGun = GameServer()->Collision()->IsSwitch(MapIndex) == TILE_ALLOW_TELE_GUN;
-			bool IsBlueSwitchTeleGun = GameServer()->Collision()->IsSwitch(MapIndex) == TILE_ALLOW_BLUE_TELE_GUN;
-
-			if(IsSwitchTeleGun || IsBlueSwitchTeleGun)
-			{
-				// Delay specifies which weapon the tile should work for.
-				// Delay = 0 means all.
-				int delay = GameServer()->Collision()->GetSwitchDelay(MapIndex);
-
-				if(delay == 1 && m_Type != WEAPON_GUN)
-					IsSwitchTeleGun = IsBlueSwitchTeleGun = false;
-				if(delay == 2 && m_Type != WEAPON_GRENADE)
-					IsSwitchTeleGun = IsBlueSwitchTeleGun = false;
-				if(delay == 3 && m_Type != WEAPON_LASER)
-					IsSwitchTeleGun = IsBlueSwitchTeleGun = false;
-			}
-
-			if(TileFIndex == TILE_ALLOW_TELE_GUN || TileFIndex == TILE_ALLOW_BLUE_TELE_GUN || IsSwitchTeleGun || IsBlueSwitchTeleGun || pTargetChr)
-			{
-				bool Found;
-				vec2 PossiblePos;
-
-				if(!Collide)
-					Found = GetNearestAirPosPlayer(pTargetChr ? pTargetChr->m_Pos : ColPos, &PossiblePos);
-				else
-					Found = GetNearestAirPos(NewPos, CurPos, &PossiblePos);
-
-				if(Found)
-				{
-					pOwnerChar->m_TeleGunPos = PossiblePos;
-					pOwnerChar->m_TeleGunTeleport = true;
-					pOwnerChar->m_IsBlueTeleGunTeleport = TileFIndex == TILE_ALLOW_BLUE_TELE_GUN || IsBlueSwitchTeleGun;
-				}
 			}
 		}
 
@@ -206,14 +156,6 @@ void CProjectile::Tick()
 			GameServer()->CreateDamageInd(CurPos, -atan2(m_Direction.x, m_Direction.y), 10);
 			m_MarkedForDestroy = true;
 			return;
-		}
-		else
-		{
-			if(!m_Freeze)
-			{
-				m_MarkedForDestroy = true;
-				return;
-			}
 		}
 	}
 	if(m_LifeSpan == -1)
@@ -315,8 +257,6 @@ bool CProjectile::FillExtraInfo(CNetObj_DDNetProjectile *pProj)
 	Data |= (m_Bouncing & 3) << 10;
 	if(m_Explosive)
 		Data |= PROJECTILEFLAG_EXPLOSIVE;
-	if(m_Freeze)
-		Data |= PROJECTILEFLAG_FREEZE;
 
 	pProj->m_X = (int)(m_Pos.x * 100.0f);
 	pProj->m_Y = (int)(m_Pos.y * 100.0f);

@@ -292,6 +292,8 @@ private:
 
 	static void ConFormattedAccountData(IConsole::IResult *pResult, void *pUserData);
 
+	static void ConBuildingMode(IConsole::IResult *pResult, void *pUserData);
+
 	enum
 	{
 		MAX_MUTES = 32,

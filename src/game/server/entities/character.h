@@ -148,7 +148,6 @@ private:
 	void SnapCharacter(int SnappingClient, int ID);
 	static bool IsSwitchActiveCb(int Number, void *pUser);
 	void HandleTiles(int Index);
-	int m_LastBroadcast;
 	void DDRaceInit();
 	void HandleSkippableTiles(int Index);
 	void DDRaceTick();
@@ -183,8 +182,6 @@ public:
 	vec2 m_Intersection;
 	bool m_LastRefillJumps;
 
-	int m_StrongWeakID;
-
 	int m_SpawnTick;
 	int m_WeaponChangeTick;
 
@@ -210,9 +207,8 @@ public:
 
 	int GetLastAction() const { return m_LastAction; }
 
-	bool HasTelegunGun() { return m_Core.m_HasTelegunGun; };
-	bool HasTelegunGrenade() { return m_Core.m_HasTelegunGrenade; };
-	bool HasTelegunLaser() { return m_Core.m_HasTelegunLaser; };
+	// 2xp
+	bool m_Builder;
 };
 
 #endif

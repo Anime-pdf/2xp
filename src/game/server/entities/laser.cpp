@@ -21,8 +21,6 @@ CLaser::CLaser(CGameWorld *pGameWorld, vec2 Pos, vec2 Direction, float StartEner
 	m_TelePos = vec2(0, 0);
 	m_WasTele = false;
 	m_Type = Type;
-	m_TeleportCancelled = false;
-	m_IsBlueTeleport = false;
 	m_TuneZone = GameServer()->Collision()->IsTune(GameServer()->Collision()->GetMapIndex(m_Pos));
 	GameWorld()->InsertEntity(this);
 	DoBounce();

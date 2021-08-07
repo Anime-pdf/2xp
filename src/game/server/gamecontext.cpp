@@ -2085,17 +2085,6 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 		{
 			int Index = pTiles[y * pTileMap->m_Width + x].m_Index;
 
-			if(Index == TILE_NPC)
-			{
-				m_Tuning.Set("player_collision", 0);
-				dbg_msg("game_layer", "found no collision tile");
-			}
-			else if(Index == TILE_NPH)
-			{
-				m_Tuning.Set("player_hooking", 0);
-				dbg_msg("game_layer", "found no player hooking tile");
-			}
-
 			if(Index >= ENTITY_OFFSET)
 			{
 				vec2 Pos(x * 32.0f + 16.0f, y * 32.0f + 16.0f);
@@ -2107,16 +2096,6 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 			{
 				Index = pFront[y * pTileMap->m_Width + x].m_Index;
 
-				if(Index == TILE_NPC)
-				{
-					m_Tuning.Set("player_collision", 0);
-					dbg_msg("front_layer", "found no collision tile");
-				}
-				else if(Index == TILE_NPH)
-				{
-					m_Tuning.Set("player_hooking", 0);
-					dbg_msg("front_layer", "found no player hooking tile");
-				}
 				if(Index >= ENTITY_OFFSET)
 				{
 					vec2 Pos(x * 32.0f + 16.0f, y * 32.0f + 16.0f);

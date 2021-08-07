@@ -26,4 +26,9 @@ CHAT_COMMAND("register", "s[login] s[password]", CFGFLAG_CHAT | CFGFLAG_SERVER, 
 
 CHAT_COMMAND("accountinfo", "", CFGFLAG_CHAT | CFGFLAG_SERVER, ConFormattedAccountData, this, "Sends actual account data to player")
 
+#ifdef CONF_DEBUG
+CHAT_COMMAND("dbg_builder", "", CFGFLAG_CHAT | CFGFLAG_SERVER, ConBuildingMode, this, "Toggle building mode")
+#endif
+
+
 #undef CHAT_COMMAND

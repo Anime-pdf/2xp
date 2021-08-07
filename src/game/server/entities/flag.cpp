@@ -1,16 +1,13 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
-/*
+
 #include "flag.h"
 #include <game/server/gamecontext.h>
 
-CFlag::CFlag(CGameWorld *pGameWorld, int Team)
-: CEntity(pGameWorld, CGameWorld::ENTTYPE_FLAG)
+CFlag::CFlag(CGameWorld *pGameWorld, int Team) :
+	CEntity(pGameWorld, CGameWorld::ENTTYPE_FLAG, m_StandPos, ms_PhysSize)
 {
 	m_Team = Team;
-	m_ProximityRadius = ms_PhysSize;
-	m_pCarryingCharacter = NULL;
-	m_GrabTick = 0;
 
 	Reset();
 }
@@ -44,4 +41,3 @@ void CFlag::Snap(int SnappingClient)
 	pFlag->m_Y = (int)m_Pos.y;
 	pFlag->m_Team = m_Team;
 }
-*/

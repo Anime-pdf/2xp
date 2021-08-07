@@ -64,8 +64,6 @@ void CSnapIDPool::Reset()
 
 int CSnapIDPool::NewID()
 {
-	int64 Now = time_get();
-
 	int ID = m_FirstFree;
 	dbg_assert(ID != -1, "id error");
 	if(ID == -1)
@@ -2241,7 +2239,7 @@ int CServer::LoadMap(const char *pMapName)
 	// load sixup version of the map
 	if(g_Config.m_SvSixup)
 	{
-		str_format(aBuf, sizeof(aBuf), "maps7/%s/%s.map", pMapName);
+		str_format(aBuf, sizeof(aBuf), "maps7/%s/%s.map", pMapName, pMapName);
 		IOHANDLE File = Storage()->OpenFile(aBuf, IOFLAG_READ, IStorage::TYPE_ALL);
 		if(!File)
 		{

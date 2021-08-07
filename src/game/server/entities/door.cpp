@@ -10,13 +10,16 @@
 
 CDoor::CDoor(CGameWorld *pGameWorld, vec2 Pos, float Rotation, int Length,
 	int Number) :
-	CEntity(pGameWorld, CGameWorld::ENTTYPE_LASER)
+	CEntity(pGameWorld, CGameWorld::ENTTYPE_LASER, Pos)
 {
 	m_Number = Number;
-	m_Pos = Pos;
 	m_Length = Length;
 	m_Direction = vec2(sin(Rotation), cos(Rotation));
-	vec2 To = Pos + normalize(m_Direction) * m_Length;
+	m_To = Pos + normalize(m_Direction) * (m_Length + 16);
+
+	Server()->SnapFreeID(GetID());
+	m_LaserSnapID = Server()->SnapNewID();
+	m_HeartSnapID = Server()->SnapNewID();
 
 	m_PreviousStatus = GameServer()->Collision()->m_pSwitchers[Number].m_Status;
 
@@ -79,36 +82,50 @@ void CDoor::Snap(int SnappingClient)
 	if(NetworkClipped(SnappingClient, m_Pos) && NetworkClipped(SnappingClient, m_To))
 		return;
 
-	CNetObj_Laser *pObj = static_cast<CNetObj_Laser *>(Server()->SnapNewItem(
-		NETOBJTYPE_LASER, GetID(), sizeof(CNetObj_Laser)));
+	CNetObj_Laser *pObj;
+	CNetObj_Pickup *pObjArmor;
 
-	if(!pObj)
+	int TickMod = Server()->Tick() % 100;
+
+	if(TickMod > 0)
+	{
+		int BufID = m_LaserSnapID;
+		m_LaserSnapID = m_HeartSnapID;
+		m_HeartSnapID = m_LaserSnapID;
+	}
+
+	pObj = static_cast<CNetObj_Laser *>(Server()->SnapNewItem(
+		NETOBJTYPE_LASER, m_LaserSnapID, sizeof(CNetObj_Laser)));
+
+	pObjArmor = static_cast<CNetObj_Pickup *>(Server()->SnapNewItem(
+		NETOBJTYPE_PICKUP, m_HeartSnapID, sizeof(CNetObj_Pickup)));
+
+	if(!pObj || !pObjArmor)
 		return;
 
-	pObj->m_X = (int)m_Pos.x;
-	pObj->m_Y = (int)m_Pos.y;
+	pObjArmor->m_Type = POWERUP_HEALTH;
+	pObjArmor->m_X = (int)m_Pos.x;
+	pObjArmor->m_Y = (int)m_Pos.y;
+
+	vec2 RealDir = m_Direction * TickMod * 0;
+
+	pObj->m_X = (int)(m_Pos.x + RealDir.x);
+	pObj->m_Y = (int)(m_Pos.y + RealDir.y);
 
 	CCharacter *Char = GameServer()->GetPlayerChar(SnappingClient);
-	int Tick = (Server()->Tick() % Server()->TickSpeed()) % 11;
 
 	if(SnappingClient > -1 && GameServer()->m_apPlayers[SnappingClient]->GetTeam() == TEAM_SPECTATORS && GameServer()->m_apPlayers[SnappingClient]->m_SpectatorID != SPEC_FREEVIEW)
 		Char = GameServer()->GetPlayerChar(GameServer()->m_apPlayers[SnappingClient]->m_SpectatorID);
 
-	if(Char == 0)
-		return;
-
-	if(Char->IsAlive() && GameServer()->Collision()->m_NumSwitchers > 0 && !GameServer()->Collision()->m_pSwitchers[m_Number].m_Status && (!Tick))
-		return;
-
-	if(Char->IsAlive() && GameServer()->Collision()->m_NumSwitchers > 0 && GameServer()->Collision()->m_pSwitchers[m_Number].m_Status)
+	if(GameServer()->Collision()->m_NumSwitchers > 0 && GameServer()->Collision()->m_pSwitchers[m_Number].m_Status)
 	{
-		pObj->m_FromX = (int)m_To.x;
-		pObj->m_FromY = (int)m_To.y;
+		pObj->m_FromX = (int)(m_To.x - RealDir.x);
+		pObj->m_FromY = (int)(m_To.y - RealDir.y);
 	}
 	else
 	{
-		pObj->m_FromX = (int)m_Pos.x;
-		pObj->m_FromY = (int)m_Pos.y;
+		pObj->m_FromX = (int)(m_Pos.x + RealDir.y);
+		pObj->m_FromY = (int)(m_Pos.y + RealDir.y);
 	}
 	pObj->m_StartTick = Server()->Tick();
 }

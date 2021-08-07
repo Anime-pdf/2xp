@@ -12,6 +12,9 @@
 #include "laser.h"
 #include "projectile.h"
 
+// 2xp
+#include "mod/building.h"
+
 MACRO_ALLOC_POOL_ID_IMPL(CCharacter, MAX_CLIENTS)
 
 // Character, "physical" player's part
@@ -20,7 +23,6 @@ CCharacter::CCharacter(CGameWorld *pWorld) :
 {
 	m_Health = 0;
 	m_Armor = 0;
-	m_StrongWeakID = 0;
 
 	// never intilize both to zero
 	m_Input.m_TargetX = 0;
@@ -42,6 +44,8 @@ bool CCharacter::Spawn(CPlayer *pPlayer, vec2 Pos)
 	m_LastWeapon = WEAPON_HAMMER;
 	m_QueuedWeapon = -1;
 	m_LastRefillJumps = false;
+
+	m_Builder = true;
 
 	m_pPlayer = pPlayer;
 	m_Pos = Pos;
@@ -295,6 +299,7 @@ void CCharacter::FireWeapon()
 	}
 
 	vec2 ProjStartPos = m_Pos + Direction * GetProximityRadius() * 0.75f;
+	vec2 BuildingPos = m_Pos + Direction * GetProximityRadius() * 2.f;
 
 	switch(m_Core.m_ActiveWeapon)
 	{
@@ -309,7 +314,22 @@ void CCharacter::FireWeapon()
 		if(m_Hit & DISABLE_HIT_HAMMER)
 			break;
 
-		CCharacter *apEnts[MAX_CLIENTS];
+		CCharacter *apEnts[MAX_CLIENTS] = {0};
+
+		if(m_Builder && !GameServer()->Collision()->IsSolid(BuildingPos.x, BuildingPos.y) &&
+			!GameServer()->m_World.FindEntities(BuildingPos, GetProximityRadius(), (CEntity **)apEnts,
+				1, CGameWorld::ENTTYPE_CHARACTER))
+			new CBuilding(GameWorld(), vec2((int)BuildingPos.x / 32 * 32 + 16, (int)BuildingPos.y / 32 * 32 + 16));
+		
+		if(!m_Builder)
+		{
+			CBuilding *aBuilding[1];
+			if(GameServer()->m_World.FindEntities(BuildingPos, GetProximityRadius(), (CEntity **)aBuilding,
+				   1, CGameWorld::ENTTYPE_BUILDING))
+				aBuilding[0]->Destroy();
+		}
+
+		apEnts[0] = 0;
 		int Hits = 0;
 		int Num = GameServer()->m_World.FindEntities(ProjStartPos, GetProximityRadius() * 0.5f, (CEntity **)apEnts,
 			MAX_CLIENTS, CGameWorld::ENTTYPE_CHARACTER);
@@ -1103,7 +1123,7 @@ void CCharacter::Snap(int SnappingClient)
 
 	pDDNetCharacter->m_Jumps = m_Core.m_Jumps;
 	pDDNetCharacter->m_TeleCheckpoint = m_TeleCheckpoint;
-	pDDNetCharacter->m_StrongWeakID = m_StrongWeakID;
+	pDDNetCharacter->m_StrongWeakID = 0;
 }
 
 // DDRace
@@ -1443,7 +1463,6 @@ void CCharacter::ResetPickups()
 void CCharacter::DDRaceInit()
 {
 	m_PrevPos = m_Pos;
-	m_LastBroadcast = 0;
 	m_TeleCheckpoint = 0;
 	m_Hit = HIT_ALL;
 	m_Core.m_Jumps = 2;

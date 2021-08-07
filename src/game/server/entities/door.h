@@ -16,6 +16,9 @@ class CDoor : public CEntity
 
 	bool m_PreviousStatus;
 
+	int m_LaserSnapID;
+	int m_HeartSnapID;
+
 public:
 	void Open(int Tick);
 	void Open();

@@ -333,3 +333,14 @@ void CGameContext::ConFormattedAccountData(IConsole::IResult *pResult, void *pUs
 
 	pSelf->SendChatTarget(pResult->m_ClientID, aBuf);
 }
+
+void CGameContext::ConBuildingMode(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameContext *pSelf = (CGameContext *)pUserData;
+	if(!CheckClientID(pResult->m_ClientID))
+		return;
+	if(pSelf->m_apPlayers[pResult->m_ClientID]->HasNoCharacter())
+		return;
+
+	pSelf->m_apPlayers[pResult->m_ClientID]->GetCharacter()->m_Builder = !pSelf->m_apPlayers[pResult->m_ClientID]->GetCharacter()->m_Builder;
+}
