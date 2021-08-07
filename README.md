@@ -1,4 +1,4 @@
-[![2xp](https://github.com/tw-2xp/static-images/blob/main/logos/logo-main.png)]
+![2xp](https://github.com/tw-2xp/static-images/blob/main/logos/logo-main.png)
 
 Cloning
 -------
@@ -56,22 +56,6 @@ Whether to prefer bundled libraries over system libraries. Setting to ON will ma
 
 * **-DWEBSOCKETS=[ON|OFF]** <br>
 Whether to enable WebSocket support for server. Setting to ON requires the `libwebsockets-dev` library installed. Default value is OFF.
-
-* **-DMYSQL=[ON|OFF]** <br>
-Whether to enable MySQL/MariaDB support for server. Requires at least MySQL 8.0 or MariaDB 10.2. Setting to ON requires the `libmariadbclient-dev`, `libmysqlcppconn-dev` and `libboost-dev` libraries installed, which are also provided as bundled libraries for the common platforms. Default value is OFF.
-
-   Note that the bundled MySQL libraries might not work properly on your system. If you run into connection problems with the MySQL server, for example that it connects as root while you chose another user, make sure to install your system libraries for the MySQL client and C++ connector. Make sure that the CMake configuration summary says that it found MySQL libs that were not bundled (no "using bundled libs").
-
-* **-DAUTOUPDATE=[ON|OFF]** <br>
-Whether to enable the autoupdater. Packagers may want to disable this for their packages. Default value is ON for Windows and Linux.
-
-* **-DCLIENT=[ON|OFF]** <br>
-Whether to enable client compilation. If set to OFF, DDNet will not depend on Curl, Freetype, Ogg, Opus, Opusfile, and SDL2. Default value is ON.
-
-* **-DVIDEORECORDER=[ON|OFF]** <br>
-Whether to add video recording support using FFmpeg to the client. You can use command `start_video` and `stop_video` to start and stop conversion from demo to mp4. This feature is currently experimental and not enabled by default.
-
-Dependencies needed on debian: `libx264-dev libavfilter-dev libavdevice-dev libavformat-dev libavcodec-extra libavutil-dev`
 
 * **-DDOWNLOAD_GTEST=[ON|OFF]** <br>
 Whether to download and compile GTest. Useful if GTest is not installed and, for Linux users, there is no suitable package providing it. Default value is OFF.
@@ -139,51 +123,6 @@ Install MinGW cross-compilers of the form `i686-w64-mingw32-gcc` (32 bit) or
 
 Then add `-DCMAKE_TOOLCHAIN_FILE=../cmake/toolchains/mingw64.toolchain` to the
 **initial** CMake command line.
-
-Cross-compiling on Linux to macOS
----------------------------------
-
-Install [osxcross](https://github.com/tpoechtrager/osxcross), then add
-`-DCMAKE_TOOLCHAIN_FILE=../cmake/toolchains/darwin.toolchain` and
-`-DCMAKE_OSX_SYSROOT=/path/to/osxcross/target/SDK/MacOSX10.11.sdk/` to the
-**initial** CMake command line.
-
-Install `dmg` and `hfsplus` from
-[libdmg-hfsplus](https://github.com/mozilla/libdmg-hfsplus) and `newfs_hfs`
-from
-[diskdev\_cmds](http://pkgs.fedoraproject.org/repo/pkgs/hfsplus-tools/diskdev_cmds-540.1.linux3.tar.gz/0435afc389b919027b69616ad1b05709/diskdev_cmds-540.1.linux3.tar.gz)
-to unlock the `package_dmg` target that outputs a macOS disk image.
-
-Importing the official DDNet Database
--------------------------------------
-
-```bash
-$ wget https://ddnet.tw/stats/ddnet-sql.zip
-$ unzip ddnet-sql.zip
-$ yaourt -S mariadb mysql-connector-c++
-$ mysql_install_db --user=mysql --basedir=/usr --datadir=/var/lib/mysql
-$ systemctl start mariadb
-$ mysqladmin -u root password 'PW'
-$ mysql -u root -p'PW'
-MariaDB [(none)]> create database teeworlds; create user 'teeworlds'@'localhost' identified by 'PW2'; grant all privileges on teeworlds.* to 'teeworlds'@'localhost'; flush privileges;
-# this takes a while, you can remove the KEYs in record_race.sql to trade performance in queries
-$ mysql -u teeworlds -p'PW2' teeworlds < ddnet-sql/record_*.sql
-
-$ cat mine.cfg
-sv_use_sql 1
-add_sqlserver r teeworlds record teeworlds "PW2" "localhost" "3306"
-add_sqlserver w teeworlds record teeworlds "PW2" "localhost" "3306"
-
-$ mkdir build
-$ cd build
-$ cmake -DMYSQL=ON ..
-$ make -j8
-$ ./DDNet-Server -f mine.cfg
-```
-
-<a href="https://repology.org/metapackage/ddnet/versions">
-    <img src="https://repology.org/badge/vertical-allrepos/ddnet.svg?header=" alt="Packaging status" align="right">
-</a>
 
 Installation from Repository
 ----------------------------
