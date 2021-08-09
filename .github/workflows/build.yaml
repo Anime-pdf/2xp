@@ -72,6 +72,7 @@ jobs:
 
     - name: Build in release mode with debug info and all features on
       env: ${{ matrix.env }}
+      if: contains(matrix.os, 'ubuntu')
       run: |
         mkdir fancy
         cd fancy
