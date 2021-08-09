@@ -112,11 +112,6 @@ void CDoor::Snap(int SnappingClient)
 	pObj->m_X = (int)(m_Pos.x + RealDir.x);
 	pObj->m_Y = (int)(m_Pos.y + RealDir.y);
 
-	CCharacter *Char = GameServer()->GetPlayerChar(SnappingClient);
-
-	if(SnappingClient > -1 && GameServer()->m_apPlayers[SnappingClient]->GetTeam() == TEAM_SPECTATORS && GameServer()->m_apPlayers[SnappingClient]->m_SpectatorID != SPEC_FREEVIEW)
-		Char = GameServer()->GetPlayerChar(GameServer()->m_apPlayers[SnappingClient]->m_SpectatorID);
-
 	if(GameServer()->Collision()->m_NumSwitchers > 0 && GameServer()->Collision()->m_pSwitchers[m_Number].m_Status)
 	{
 		pObj->m_FromX = (int)(m_To.x - RealDir.x);
