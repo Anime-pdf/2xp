@@ -71,12 +71,11 @@ jobs:
         ${{ matrix.cmake-path }}cmake --build . --config Release --target 2xp ${{ matrix.build-args }}
 
     - name: Build in release mode with debug info and all features on
-      if: matrix.fancy
       env: ${{ matrix.env }}
       run: |
         mkdir fancy
         cd fancy
-        ${{ matrix.cmake-path }}cmake ${{ matrix.cmake-args }} -DCMAKE_BUILD_TYPE=RelWithDebInfo -DANTIBOT=ON -DMYSQL=ON -DWEBSOCKETS=ON ..
+        ${{ matrix.cmake-path }}cmake ${{ matrix.cmake-args }} -DCMAKE_BUILD_TYPE=RelWithDebInfo -DWEBSOCKETS=ON ..
         ${{ matrix.cmake-path }}cmake --build . --config RelWithDebInfo --target 2xp ${{ matrix.build-args }}
 
     - name: Package

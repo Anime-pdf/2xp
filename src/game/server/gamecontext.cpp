@@ -2538,7 +2538,7 @@ void CGameContext::ResetTuning()
 	SendTuningParams(-1);
 }
 
-bool CheckClientID(int ClientID)
+bool IsValidCID(int ClientID)
 {
 	if(ClientID < 0 || ClientID >= MAX_CLIENTS)
 		return false;
@@ -2638,7 +2638,7 @@ void CGameContext::Whisper(int ClientID, char *pStr)
 		return;
 	}
 
-	if(Victim >= MAX_CLIENTS || !CheckClientID(Victim))
+	if(Victim >= MAX_CLIENTS || !IsValidCID(Victim))
 	{
 		str_format(aBuf, sizeof(aBuf), "No player with name \"%s\" found", pName);
 		SendChatTarget(ClientID, aBuf);
@@ -2650,10 +2650,10 @@ void CGameContext::Whisper(int ClientID, char *pStr)
 
 void CGameContext::WhisperID(int ClientID, int VictimID, const char *pMessage)
 {
-	if(!CheckClientID(ClientID))
+	if(!IsValidCID(ClientID))
 		return;
 
-	if(!CheckClientID(VictimID))
+	if(!IsValidCID(VictimID))
 		return;
 
 	if(m_apPlayers[ClientID])
@@ -2791,7 +2791,7 @@ int CGameContext::GetClientVersion(int ClientID) const
 
 CPlayer *CGameContext::GetPlayer(int ClientID)
 {
-	if(!CheckClientID(ClientID) && m_apPlayers[ClientID])
+	if(!IsValidCID(ClientID) || !m_apPlayers[ClientID])
 		return 0;
 
 	return m_apPlayers[ClientID];
