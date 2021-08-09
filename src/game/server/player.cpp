@@ -501,51 +501,51 @@ void CPlayer::SetGameTeam(int Team, bool DoChatMsg)
 	if(m_GameTeam == Team)
 		return;
 
-	if (Team == IGameController::TXP_TEAM_DIED)
-	{
-		SetTeam(TEAM_SPECTATORS);
+	// if (Team == IGameController::TXP_TEAM_DIED)
+	// {
+	// 	SetTeam(TEAM_SPECTATORS);
 
-		if (m_GameTeam == IGameController::TXP_TEAM_H)
-		{
-			if (DoChatMsg)
-			{
-				// char aBuf[256];
-				// str_format(aBuf, sizeof(aBuf), "\n\n\n\n\n\n\n\n\n\n\n\n[Human]\n\n%s died.\n\n\nR.I.P");
+	// 	if (m_GameTeam == IGameController::TXP_TEAM_H)
+	// 	{
+	// 		if (DoChatMsg)
+	// 		{
+	// 			// char aBuf[256];
+	// 			// str_format(aBuf, sizeof(aBuf), "\n\n\n\n\n\n\n\n\n\n\n\n[Human]\n\n%s died.\n\n\nR.I.P");
 
-				// GameServer()->SendBroadcastToActivePlayers(aBuf);
-			}
-		}
-		else
-		{
-			if(DoChatMsg)
-			{
-				// char aBuf[256];
-				// str_format(aBuf, sizeof(aBuf), "\n\n\n\n\n\n\n\n\n\n\n\n[Zombie]\n\n%s died.\n\n\nR.I.P");
+	// 			// GameServer()->SendBroadcastToActivePlayers(aBuf);
+	// 		}
+	// 	}
+	// 	else
+	// 	{
+	// 		if(DoChatMsg)
+	// 		{
+	// 			// char aBuf[256];
+	// 			// str_format(aBuf, sizeof(aBuf), "\n\n\n\n\n\n\n\n\n\n\n\n[Zombie]\n\n%s died.\n\n\nR.I.P");
 
-				// GameServer()->SendBroadcastToActivePlayers(aBuf);
-			}
-		}
-	}
-	else if(Team == IGameController::TXP_TEAM_H)
-	{
-		if(DoChatMsg)
-		{
-			// char aBuf[256];
-			// str_format(aBuf, sizeof(aBuf), "\n\n\n\n\n\n\n\n\n\n\n\n[Human]\n\n%s revived.\n\n\nR.I.P");
+	// 			// GameServer()->SendBroadcastToActivePlayers(aBuf);
+	// 		}
+	// 	}
+	// }
+	// else if(Team == IGameController::TXP_TEAM_H)
+	// {
+	// 	if(DoChatMsg)
+	// 	{
+	// 		// char aBuf[256];
+	// 		// str_format(aBuf, sizeof(aBuf), "\n\n\n\n\n\n\n\n\n\n\n\n[Human]\n\n%s revived.\n\n\nR.I.P");
 
-			// GameServer()->SendBroadcastToActivePlayers(aBuf);
-		}
-	}
-	else
-	{
-		if(DoChatMsg)
-		{
-			// char aBuf[256];
-			// str_format(aBuf, sizeof(aBuf), "\n\n\n\n\n\n\n\n\n\n\n\n[Human]\n\n%s was infected.\n\n\nR.I.P");
+	// 		// GameServer()->SendBroadcastToActivePlayers(aBuf);
+	// 	}
+	// }
+	// else
+	// {
+	// 	if(DoChatMsg)
+	// 	{
+	// 		// char aBuf[256];
+	// 		// str_format(aBuf, sizeof(aBuf), "\n\n\n\n\n\n\n\n\n\n\n\n[Human]\n\n%s was infected.\n\n\nR.I.P");
 
-			// GameServer()->SendBroadcastToActivePlayers(aBuf);
-		}
-	}
+	// 		// GameServer()->SendBroadcastToActivePlayers(aBuf);
+	// 	}
+	// }
 
 	m_GameTeam = Team;
 }
