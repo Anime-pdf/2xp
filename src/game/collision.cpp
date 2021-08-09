@@ -112,7 +112,6 @@ void CCollision::Init(class CLayers *pLayers)
 
 	for(int i = 0; i < m_Width * m_Height; i++)
 	{
-		int Index;
 		if(m_pSwitch)
 		{
 			if(m_pSwitch[i].m_Number > m_NumSwitchers)
@@ -122,8 +121,6 @@ void CCollision::Init(class CLayers *pLayers)
 				m_pDoor[i].m_Number = m_pSwitch[i].m_Number;
 			else
 				m_pDoor[i].m_Number = 0;
-
-			Index = m_pSwitch[i].m_Type;
 		}
 	}
 
