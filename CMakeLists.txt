@@ -633,14 +633,12 @@ set_src(ENGINE_INTERFACE GLOB src/engine
   demo.h
   engine.h
   kernel.h
-  keys.h
   map.h
   masterserver.h
   message.h
   server.h
   storage.h
   uuid.h
-  warning.h
 )
 file(GLOB ENGINE_SHARED src/engine/shared/*)
 file(GLOB GAME_SHARED src/game/*)

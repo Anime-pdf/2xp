@@ -15,7 +15,6 @@ def recursive_file_list(path):
 
 IGNORE_FILES = [
 	"src/engine/client/keynames.h",
-	"src/engine/keys.h",
 ]
 def filter_ignored(filenames):
 	return [filename for filename in filenames
