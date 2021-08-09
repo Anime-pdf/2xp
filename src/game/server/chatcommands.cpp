@@ -11,7 +11,7 @@
 #include "entities/character.h"
 #include "player.h"
 
-bool CheckClientID(int ClientID);
+bool IsValidCID(int ClientID);
 
 void CGameContext::ConCredits(IConsole::IResult *pResult, void *pUserData)
 {
@@ -68,7 +68,7 @@ void CGameContext::ConList(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
 	int ClientID = pResult->m_ClientID;
-	if(!CheckClientID(ClientID))
+	if(!IsValidCID(ClientID))
 		return;
 
 	char zerochar = 0;
@@ -106,7 +106,7 @@ void CGameContext::ConRules(IConsole::IResult *pResult, void *pUserData)
 void CGameContext::ConMe(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
-	if(!CheckClientID(pResult->m_ClientID))
+	if(!IsValidCID(pResult->m_ClientID))
 		return;
 
 	char aBuf[256 + 24];
@@ -136,7 +136,7 @@ void CGameContext::ConWhisper(IConsole::IResult *pResult, void *pUserData)
 void CGameContext::ConSetEyeEmote(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
-	if(!CheckClientID(pResult->m_ClientID))
+	if(!IsValidCID(pResult->m_ClientID))
 		return;
 
 	CPlayer *pPlayer = pSelf->m_apPlayers[pResult->m_ClientID];
@@ -176,7 +176,7 @@ void CGameContext::ConEyeEmote(IConsole::IResult *pResult, void *pUserData)
 		return;
 	}
 
-	if(!CheckClientID(pResult->m_ClientID))
+	if(!IsValidCID(pResult->m_ClientID))
 		return;
 
 	CPlayer *pPlayer = pSelf->m_apPlayers[pResult->m_ClientID];
@@ -232,7 +232,7 @@ void CGameContext::ConEyeEmote(IConsole::IResult *pResult, void *pUserData)
 void CGameContext::ConNinjaJetpack(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
-	if(!CheckClientID(pResult->m_ClientID))
+	if(!IsValidCID(pResult->m_ClientID))
 		return;
 
 	CPlayer *pPlayer = pSelf->m_apPlayers[pResult->m_ClientID];
@@ -247,7 +247,7 @@ void CGameContext::ConNinjaJetpack(IConsole::IResult *pResult, void *pUserData)
 void CGameContext::ConPlayerLogin(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
-	if(!CheckClientID(pResult->m_ClientID))
+	if(!IsValidCID(pResult->m_ClientID))
 		return;
 
 	CPlayer *pPlayer = pSelf->m_apPlayers[pResult->m_ClientID];
@@ -278,7 +278,7 @@ void CGameContext::ConPlayerLogin(IConsole::IResult *pResult, void *pUserData)
 void CGameContext::ConPlayerRegister(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
-	if(!CheckClientID(pResult->m_ClientID))
+	if(!IsValidCID(pResult->m_ClientID))
 		return;
 
 	const int LoginLength = str_length(pResult->GetString(0));
@@ -315,7 +315,7 @@ void CGameContext::ConPlayerRegister(IConsole::IResult *pResult, void *pUserData
 void CGameContext::ConFormattedAccountData(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
-	if(!CheckClientID(pResult->m_ClientID))
+	if(!IsValidCID(pResult->m_ClientID))
 		return;
 
 	CPlayer *pPlayer = pSelf->m_apPlayers[pResult->m_ClientID];
@@ -337,7 +337,7 @@ void CGameContext::ConFormattedAccountData(IConsole::IResult *pResult, void *pUs
 void CGameContext::ConBuildingMode(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
-	if(!CheckClientID(pResult->m_ClientID))
+	if(!IsValidCID(pResult->m_ClientID))
 		return;
 	if(pSelf->m_apPlayers[pResult->m_ClientID]->HasNoCharacter())
 		return;

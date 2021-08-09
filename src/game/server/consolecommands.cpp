@@ -6,12 +6,12 @@
 #include <game/server/player.h>
 #include <game/version.h>
 
-bool CheckClientID(int ClientID);
+bool IsValidCID(int ClientID);
 
 void CGameContext::ConGoLeft(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
-	if(!CheckClientID(pResult->m_ClientID))
+	if(!IsValidCID(pResult->m_ClientID))
 		return;
 	pSelf->MoveCharacter(pResult->m_ClientID, -1, 0);
 }
@@ -19,7 +19,7 @@ void CGameContext::ConGoLeft(IConsole::IResult *pResult, void *pUserData)
 void CGameContext::ConGoRight(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
-	if(!CheckClientID(pResult->m_ClientID))
+	if(!IsValidCID(pResult->m_ClientID))
 		return;
 	pSelf->MoveCharacter(pResult->m_ClientID, 1, 0);
 }
@@ -27,7 +27,7 @@ void CGameContext::ConGoRight(IConsole::IResult *pResult, void *pUserData)
 void CGameContext::ConGoDown(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
-	if(!CheckClientID(pResult->m_ClientID))
+	if(!IsValidCID(pResult->m_ClientID))
 		return;
 	pSelf->MoveCharacter(pResult->m_ClientID, 0, 1);
 }
@@ -35,7 +35,7 @@ void CGameContext::ConGoDown(IConsole::IResult *pResult, void *pUserData)
 void CGameContext::ConGoUp(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
-	if(!CheckClientID(pResult->m_ClientID))
+	if(!IsValidCID(pResult->m_ClientID))
 		return;
 	pSelf->MoveCharacter(pResult->m_ClientID, 0, -1);
 }
@@ -43,7 +43,7 @@ void CGameContext::ConGoUp(IConsole::IResult *pResult, void *pUserData)
 void CGameContext::ConMove(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
-	if(!CheckClientID(pResult->m_ClientID))
+	if(!IsValidCID(pResult->m_ClientID))
 		return;
 	pSelf->MoveCharacter(pResult->m_ClientID, pResult->GetInteger(0),
 		pResult->GetInteger(1));
@@ -52,7 +52,7 @@ void CGameContext::ConMove(IConsole::IResult *pResult, void *pUserData)
 void CGameContext::ConMoveRaw(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
-	if(!CheckClientID(pResult->m_ClientID))
+	if(!IsValidCID(pResult->m_ClientID))
 		return;
 	pSelf->MoveCharacter(pResult->m_ClientID, pResult->GetInteger(0),
 		pResult->GetInteger(1), true);
@@ -72,7 +72,7 @@ void CGameContext::MoveCharacter(int ClientID, int X, int Y, bool Raw)
 void CGameContext::ConKillPlayer(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
-	if(!CheckClientID(pResult->m_ClientID))
+	if(!IsValidCID(pResult->m_ClientID))
 		return;
 	int Victim = pResult->GetVictim();
 
@@ -225,7 +225,7 @@ void CGameContext::ConTeleport(IConsole::IResult *pResult, void *pUserData)
 void CGameContext::ConKill(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
-	if(!CheckClientID(pResult->m_ClientID))
+	if(!IsValidCID(pResult->m_ClientID))
 		return;
 	CPlayer *pPlayer = pSelf->m_apPlayers[pResult->m_ClientID];
 
