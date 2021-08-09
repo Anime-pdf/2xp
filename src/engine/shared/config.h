@@ -40,7 +40,7 @@ enum
 	CFGFLAG_COLALPHA = 1 << 11,
 };
 
-class CConfigManager : public IConfigManager
+struct CConfigManager : public IConfigManager
 {
 	enum
 	{

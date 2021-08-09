@@ -95,12 +95,12 @@ void CGameContext::ConHelp(IConsole::IResult *pResult, void *pUserData)
 
 void CGameContext::ConSettings(IConsole::IResult *pResult, void *pUserData)
 {
-	CGameContext *pSelf = (CGameContext *)pUserData;
+	// CGameContext *pSelf = (CGameContext *)pUserData;
 }
 
 void CGameContext::ConRules(IConsole::IResult *pResult, void *pUserData)
 {
-	CGameContext *pSelf = (CGameContext *)pUserData;
+	// CGameContext *pSelf = (CGameContext *)pUserData;
 }
 
 void CGameContext::ConMe(IConsole::IResult *pResult, void *pUserData)

@@ -412,8 +412,7 @@ void CCharacterCore::Tick(bool UseInput)
 					if(Distance > PhysSize * 1.50f) // TODO: fix tweakable variable
 					{
 						float Accel = m_Tuning.m_HookDragAccel * (Distance / m_Tuning.m_HookLength);
-
-						vec2 Temp;
+						
 						// add force to the hooked player
 						pCharCore->m_HookDragVel += Dir * Accel * 1.5f;
 						// add a little bit force to the guy who has the grip

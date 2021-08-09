@@ -509,20 +509,20 @@ void CPlayer::SetGameTeam(int Team, bool DoChatMsg)
 		{
 			if (DoChatMsg)
 			{
-				char aBuf[256];
-				str_format(aBuf, sizeof(aBuf), "\n\n\n\n\n\n\n\n\n\n\n\n[Human]\n\n%s died.\n\n\nR.I.P");
+				// char aBuf[256];
+				// str_format(aBuf, sizeof(aBuf), "\n\n\n\n\n\n\n\n\n\n\n\n[Human]\n\n%s died.\n\n\nR.I.P");
 
-				GameServer()->SendBroadcastToActivePlayers(aBuf);
+				// GameServer()->SendBroadcastToActivePlayers(aBuf);
 			}
 		}
 		else
 		{
 			if(DoChatMsg)
 			{
-				char aBuf[256];
-				str_format(aBuf, sizeof(aBuf), "\n\n\n\n\n\n\n\n\n\n\n\n[Zombie]\n\n%s died.\n\n\nR.I.P");
+				// char aBuf[256];
+				// str_format(aBuf, sizeof(aBuf), "\n\n\n\n\n\n\n\n\n\n\n\n[Zombie]\n\n%s died.\n\n\nR.I.P");
 
-				GameServer()->SendBroadcastToActivePlayers(aBuf);
+				// GameServer()->SendBroadcastToActivePlayers(aBuf);
 			}
 		}
 	}
@@ -530,20 +530,20 @@ void CPlayer::SetGameTeam(int Team, bool DoChatMsg)
 	{
 		if(DoChatMsg)
 		{
-			char aBuf[256];
-			str_format(aBuf, sizeof(aBuf), "\n\n\n\n\n\n\n\n\n\n\n\n[Human]\n\n%s revived.\n\n\nR.I.P");
+			// char aBuf[256];
+			// str_format(aBuf, sizeof(aBuf), "\n\n\n\n\n\n\n\n\n\n\n\n[Human]\n\n%s revived.\n\n\nR.I.P");
 
-			GameServer()->SendBroadcastToActivePlayers(aBuf);
+			// GameServer()->SendBroadcastToActivePlayers(aBuf);
 		}
 	}
 	else
 	{
 		if(DoChatMsg)
 		{
-			char aBuf[256];
-			str_format(aBuf, sizeof(aBuf), "\n\n\n\n\n\n\n\n\n\n\n\n[Human]\n\n%s was infected.\n\n\nR.I.P");
+			// char aBuf[256];
+			// str_format(aBuf, sizeof(aBuf), "\n\n\n\n\n\n\n\n\n\n\n\n[Human]\n\n%s was infected.\n\n\nR.I.P");
 
-			GameServer()->SendBroadcastToActivePlayers(aBuf);
+			// GameServer()->SendBroadcastToActivePlayers(aBuf);
 		}
 	}
 

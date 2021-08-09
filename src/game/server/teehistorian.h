@@ -9,7 +9,7 @@
 
 #include <time.h>
 
-class CConfig;
+struct CConfig;
 class CTuningParams;
 class CUuidManager;
 

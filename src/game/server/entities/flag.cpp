@@ -5,7 +5,7 @@
 #include <game/server/gamecontext.h>
 
 CFlag::CFlag(CGameWorld *pGameWorld, int Team) :
-	CEntity(pGameWorld, CGameWorld::ENTTYPE_FLAG, m_StandPos, ms_PhysSize)
+	CEntity(pGameWorld, CGameWorld::ENTTYPE_FLAG, vec2(0, 0), ms_PhysSize)
 {
 	m_Team = Team;
 

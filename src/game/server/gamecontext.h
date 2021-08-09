@@ -47,7 +47,7 @@ enum
 	NUM_TUNEZONES = 256
 };
 
-class CConfig;
+struct CConfig;
 class CHeap;
 class CPlayer;
 class IConsole;

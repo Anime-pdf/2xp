@@ -91,7 +91,7 @@ void CDoor::Snap(int SnappingClient)
 	{
 		int BufID = m_LaserSnapID;
 		m_LaserSnapID = m_HeartSnapID;
-		m_HeartSnapID = m_LaserSnapID;
+		m_HeartSnapID = BufID;
 	}
 
 	pObj = static_cast<CNetObj_Laser *>(Server()->SnapNewItem(

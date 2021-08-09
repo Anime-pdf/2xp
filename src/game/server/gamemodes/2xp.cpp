@@ -50,7 +50,6 @@ void CGCTXP::OnPlayerConnect(CPlayer *pPlayer)
 
 void CGCTXP::OnPlayerDisconnect(CPlayer *pPlayer, const char *pReason)
 {
-	int ClientID = pPlayer->GetCID();
 
 	IGameController::OnPlayerDisconnect(pPlayer, pReason);
 }
@@ -65,8 +64,6 @@ void CGCTXP::DoTeamChange(class CPlayer *pPlayer, int Team)
 	Team = ClampTeam(Team);
 	if(Team == pPlayer->GetTeam())
 		return;
-
-	CCharacter *pCharacter = pPlayer->GetCharacter();
 
 	IGameController::DoTeamChange(pPlayer, Team);
 }

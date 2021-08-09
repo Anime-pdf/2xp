@@ -82,7 +82,7 @@ public:
 class CServer : public IServer
 {
 	class IGameServer *m_pGameServer;
-	class CConfig *m_pConfig;
+	struct CConfig *m_pConfig;
 	class IConsole *m_pConsole;
 	class IStorage *m_pStorage;
 	class IEngineAntibot *m_pAntibot;
@@ -101,7 +101,7 @@ class CServer : public IServer
 
 public:
 	class IGameServer *GameServer() { return m_pGameServer; }
-	class CConfig *Config() { return m_pConfig; }
+	struct CConfig *Config() { return m_pConfig; }
 	class IConsole *Console() { return m_pConsole; }
 	class IStorage *Storage() { return m_pStorage; }
 	class IEngineAntibot *Antibot() { return m_pAntibot; }

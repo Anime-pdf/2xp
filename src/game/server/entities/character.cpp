@@ -774,7 +774,6 @@ void CCharacter::TickDefered()
 
 	{
 		int Events = m_Core.m_TriggeredEvents;
-		int CID = m_pPlayer->GetCID();
 
 		if(Events & COREEVENT_GROUND_JUMP)
 			GameServer()->CreateSound(m_Pos, SOUND_PLAYER_JUMP);
@@ -1252,8 +1251,8 @@ void CCharacter::HandleTiles(int Index)
 {
 	int MapIndex = Index;
 	//int PureMapIndex = GameServer()->Collision()->GetPureMapIndex(m_Pos);
-	int m_TileIndex = GameServer()->Collision()->GetTileIndex(MapIndex);
-	int m_TileFIndex = GameServer()->Collision()->GetFTileIndex(MapIndex);
+	//int m_TileIndex = GameServer()->Collision()->GetTileIndex(MapIndex);
+	//int m_TileFIndex = GameServer()->Collision()->GetFTileIndex(MapIndex);
 	m_MoveRestrictions = GameServer()->Collision()->GetMoveRestrictions(IsSwitchActiveCb, this, m_Pos, 18.0f, MapIndex);
 	if(Index < 0)
 	{

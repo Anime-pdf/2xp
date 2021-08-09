@@ -262,7 +262,6 @@ void CVoteManager::Tick()
 
 			// remember checked players, only the first player with a specific ip will be handled
 			bool aVoteChecked[MAX_CLIENTS] = {false};
-			int64 Now = Server()->Tick();
 			for(int i = 0; i < MAX_CLIENTS; i++)
 			{
 				if(!GameServer()->GetPlayer(i) || aVoteChecked[i])

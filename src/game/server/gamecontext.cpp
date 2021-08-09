@@ -215,7 +215,7 @@ void CGameContext::CreateExplosion(vec2 Pos, int Owner, int Weapon, bool NoDamag
 		if(!(int)Dmg)
 			continue;
 
-		if((GetPlayerChar(Owner) && !(GetPlayerChar(Owner)->m_Hit & CCharacter::DISABLE_HIT_GRENADE) || NoDamage) || Owner == apEnts[i]->GetPlayer()->GetCID())
+		if((GetPlayerChar(Owner) && (!(GetPlayerChar(Owner)->m_Hit & CCharacter::DISABLE_HIT_GRENADE))) || NoDamage || Owner == apEnts[i]->GetPlayer()->GetCID())
 		{
 			apEnts[i]->TakeDamage(ForceDir * Dmg * 2, (int)Dmg, Owner, Weapon);
 		}
@@ -1795,8 +1795,6 @@ void CGameContext::ConForceVote(IConsole::IResult *pResult, void *pUserData)
 	const char *pType = pResult->GetString(0);
 	const char *pValue = pResult->GetString(1);
 	const char *pReason = pResult->NumArguments() > 2 && pResult->GetString(2)[0] ? pResult->GetString(2) : "No reason";
-	char aBuf[128] = {0};
-
 	pSelf->VoteManager()->ForceVote(pResult->m_ClientID, pType, pValue, pReason);
 }
 

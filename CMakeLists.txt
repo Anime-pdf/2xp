@@ -157,7 +157,7 @@ if(NOT MSVC AND NOT HAIKU)
   # -fstack-protector-all doesn't work on MinGW.
   add_c_compiler_flag_if_supported(OUR_FLAGS -fstack-protector-all)
 
-  add_c_compiler_flag_if_supported(OUR_FLAGS -fno-exceptions)
+  add_c_compiler_flag_if_supported(OUR_FLAGS -fexceptions)
 
   # Inaccurate floating point numbers cause problems on mingw-w64-gcc when
   # compiling for x86, might cause problems elsewhere. So don't store floats
@@ -702,10 +702,7 @@ set_src(ANTIBOT_SRC GLOB src/antibot
 file(GLOB_RECURSE ENGINE_SERVER src/engine/server/*)
 file(GLOB_RECURSE GAME_SERVER src/game/server/*)
 
-set(GAME_GENERATED_SERVER
-  "src/game/generated/wordlist.h"
-)
-set(SERVER_SRC ${ENGINE_SERVER} ${GAME_SERVER} ${GAME_GENERATED_SERVER})
+set(SERVER_SRC ${ENGINE_SERVER} ${GAME_SERVER})
 if(TARGET_OS STREQUAL "windows")
   set(SERVER_ICON "other/icons/.rc")
 else()

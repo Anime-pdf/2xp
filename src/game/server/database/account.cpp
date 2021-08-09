@@ -100,8 +100,8 @@ CAccount *CAccount::Register(const char *Login, const char *Password, int &State
 
 			SqlArgs Args;
 			Args.Add("login", std::any(std::string(ClearLogin)));
-			Args.Add("password", std::any(&std::istream(&membuf(HashP, sizeof(HashP)))));
-			Args.Add("salt", std::any(&std::istream(&membuf(aSalt, sizeof(aSalt)))));
+			Args.Add("password", std::any(new std::istream(new membuf(HashP, sizeof(HashP)))));
+			Args.Add("salt", std::any(new std::istream(new membuf(aSalt, sizeof(aSalt)))));
 			SJK.SPS("accounts", Args);
 		}
 

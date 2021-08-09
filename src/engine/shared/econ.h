@@ -5,7 +5,7 @@
 
 #include <engine/console.h>
 
-class CConfig;
+struct CConfig;
 
 class CEcon
 {

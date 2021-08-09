@@ -17,7 +17,7 @@ class IGameController
 	int m_aNumSpawnPoints[3];
 
 	class CGameContext *m_pGameServer;
-	class CConfig *m_pConfig;
+	struct CConfig *m_pConfig;
 	class IServer *m_pServer;
 
 protected:
