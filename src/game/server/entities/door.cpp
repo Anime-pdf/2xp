@@ -17,8 +17,7 @@ CDoor::CDoor(CGameWorld *pGameWorld, vec2 Pos, float Rotation, int Length,
 	m_Direction = vec2(sin(Rotation), cos(Rotation));
 	m_To = Pos + normalize(m_Direction) * (m_Length + 16);
 
-	Server()->SnapFreeID(GetID());
-	m_LaserSnapID = Server()->SnapNewID();
+	m_LaserSnapID = GetID();
 	m_HeartSnapID = Server()->SnapNewID();
 
 	m_PreviousStatus = GameServer()->Collision()->m_pSwitchers[Number].m_Status;

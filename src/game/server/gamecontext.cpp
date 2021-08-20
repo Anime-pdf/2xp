@@ -104,11 +104,11 @@ void CGameContext::CommandCallback(int ClientID, int FlagMask, const char *pCmd,
 	}
 }
 
-class CCharacter *CGameContext::GetPlayerChar(int ClientID)
+class CCharacter *CGameContext::GetCharacter(int ClientID)
 {
 	if(ClientID < 0 || ClientID >= MAX_CLIENTS || !m_apPlayers[ClientID])
 		return 0;
-	return m_apPlayers[ClientID]->GetCharacter();
+	return (CCharacter*)m_apPlayers[ClientID];
 }
 
 void CGameContext::FillAntibot(CAntibotRoundData *pData)
@@ -141,7 +141,7 @@ void CGameContext::FillAntibot(CAntibotRoundData *pData)
 		if(m_apPlayers[i])
 		{
 			str_copy(pChar->m_aName, Server()->ClientName(i), sizeof(pChar->m_aName));
-			CCharacter *pGameChar = m_apPlayers[i]->GetCharacter();
+			CCharacter *pGameChar = GetCharacter(i);
 			pChar->m_Alive = (bool)pGameChar;
 			pChar->m_Team = m_apPlayers[i]->GetTeam();
 			if(pGameChar)
@@ -215,7 +215,7 @@ void CGameContext::CreateExplosion(vec2 Pos, int Owner, int Weapon, bool NoDamag
 		if(!(int)Dmg)
 			continue;
 
-		if((GetPlayerChar(Owner) && (!(GetPlayerChar(Owner)->m_Hit & CCharacter::DISABLE_HIT_GRENADE))) || NoDamage || Owner == apEnts[i]->GetPlayer()->GetCID())
+		if((GetCharacter(Owner) && !((GetCharacter(Owner)->m_Hit & CCharacter::DISABLE_HIT_GRENADE) || NoDamage)) || Owner == apEnts[i]->GetPlayer()->GetCID())
 		{
 			apEnts[i]->TakeDamage(ForceDir * Dmg * 2, (int)Dmg, Owner, Weapon);
 		}
@@ -427,36 +427,22 @@ void CGameContext::SendSettings(int ClientID)
 	}
 }
 
-void CGameContext::SendBroadcast(const char *pText, int ClientID, bool IsImportant)
+void CGameContext::SendBroadcast(const char *pText, int ClientID)
 {
 	CNetMsg_Sv_Broadcast Msg;
 	Msg.m_pMessage = pText;
 
 	if(ClientID == -1)
 	{
-		dbg_assert(IsImportant, "broadcast messages to all players must be important");
 		Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, ClientID);
 
-		for(auto &pPlayer : m_apPlayers)
-		{
-			if(pPlayer)
-			{
-				pPlayer->m_LastBroadcastImportance = true;
-				pPlayer->m_LastBroadcast = Server()->Tick();
-			}
-		}
 		return;
 	}
 
 	if(!m_apPlayers[ClientID])
 		return;
 
-	if(!IsImportant && m_apPlayers[ClientID]->m_LastBroadcastImportance && m_apPlayers[ClientID]->m_LastBroadcast > Server()->Tick() - Server()->TickSpeed() * 10)
-		return;
-
 	Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, ClientID);
-	m_apPlayers[ClientID]->m_LastBroadcast = Server()->Tick();
-	m_apPlayers[ClientID]->m_LastBroadcastImportance = IsImportant;
 }
 
 void CGameContext::SendBroadcastToActivePlayers(const char *pText)
@@ -477,13 +463,13 @@ void CGameContext::SendTuningParams(int ClientID, int Zone)
 {
 	if(ClientID == -1)
 	{
-		for(int i = 0; i < MAX_CLIENTS; ++i)
+		for(int i = 0; i < MAX_CLIENTS; i++)
 		{
 			if(m_apPlayers[i])
 			{
-				if(m_apPlayers[i]->GetCharacter())
+				if(GetCharacter(i))
 				{
-					if(m_apPlayers[i]->GetCharacter()->m_TuneZone == Zone)
+					if(GetCharacter(i)->m_TuneZone == Zone)
 						SendTuningParams(i, Zone);
 				}
 				else if(m_apPlayers[i]->m_TuneZone == Zone)
@@ -514,39 +500,50 @@ void CGameContext::SendTuningParams(int ClientID, int Zone)
 			Last = 38;
 	}
 
+	CPlayer *pPlayer = m_apPlayers[ClientID];
+	CCharacter *pCharacter = (CCharacter *)pPlayer;
+
 	for(unsigned i = 0; i < Last; i++)
 	{
-		if(m_apPlayers[ClientID] && m_apPlayers[ClientID]->GetCharacter())
+		if(CPlayer *pPlayer = m_apPlayers[ClientID])
 		{
-			if((i == 3) // ground jump impulse
-				&& m_apPlayers[ClientID]->GetCharacter()->NeededFaketuning() & FAKETUNE_NOJUMP)
+			if(CCharacter *pCharacter = (CCharacter *)pPlayer)
 			{
-				Msg.AddInt(0);
-			}
-			else if((i == 30) // laser_damage is removed from 0.7
-				&& (Server()->IsSixup(ClientID)))
-			{
-				continue;
-			}
-			else if((i == 31) // collision
-				&& (m_apPlayers[ClientID]->GetCharacter()->NeededFaketuning() & FAKETUNE_SOLO || m_apPlayers[ClientID]->GetCharacter()->NeededFaketuning() & FAKETUNE_NOCOLL))
-			{
-				Msg.AddInt(0);
-			}
-			else if((i == 32) // hooking
-				&& (m_apPlayers[ClientID]->GetCharacter()->NeededFaketuning() & FAKETUNE_SOLO || m_apPlayers[ClientID]->GetCharacter()->NeededFaketuning() & FAKETUNE_NOHOOK))
-			{
-				Msg.AddInt(0);
-			}
-			else if((i == 33) // jetpack
-				&& !(m_apPlayers[ClientID]->GetCharacter()->NeededFaketuning() & FAKETUNE_JETPACK))
-			{
-				Msg.AddInt(0);
-			}
-			else if((i == 36) // hammer hit
-				&& m_apPlayers[ClientID]->GetCharacter()->NeededFaketuning() & FAKETUNE_NOHAMMER)
-			{
-				Msg.AddInt(0);
+				int NeededFakeTune = pCharacter->NeededFaketuning();
+				if((i == 3) // ground jump impulse
+					&& NeededFakeTune & FAKETUNE_NOJUMP)
+				{
+					Msg.AddInt(0);
+				}
+				else if((i == 30) // laser_damage is removed from 0.7
+					&& (Server()->IsSixup(ClientID)))
+				{
+					continue;
+				}
+				else if((i == 31) // collision
+					&& (NeededFakeTune & FAKETUNE_SOLO || NeededFakeTune & FAKETUNE_NOCOLL))
+				{
+					Msg.AddInt(0);
+				}
+				else if((i == 32) // hooking
+					&& (NeededFakeTune & FAKETUNE_SOLO || NeededFakeTune & FAKETUNE_NOHOOK))
+				{
+					Msg.AddInt(0);
+				}
+				else if((i == 33) // jetpack
+					&& !(NeededFakeTune & FAKETUNE_JETPACK))
+				{
+					Msg.AddInt(0);
+				}
+				else if((i == 36) // hammer hit
+					&& NeededFakeTune & FAKETUNE_NOHAMMER)
+				{
+					Msg.AddInt(0);
+				}
+				else
+				{
+					Msg.AddInt(pParams[i]);
+				}
 			}
 			else
 			{
@@ -592,10 +589,10 @@ void CGameContext::OnTick()
 	{
 		for(int i = 0; i < MAX_CLIENTS; i++)
 		{
-			if(m_apPlayers[i] && m_apPlayers[i]->GetCharacter())
+			if(GetCharacter(i))
 			{
 				CNetObj_CharacterCore Char;
-				m_apPlayers[i]->GetCharacter()->GetCore().Write(&Char);
+				GetCharacter(i)->GetCore().Write(&Char);
 				m_TeeHistorian.RecordPlayer(i, &Char);
 			}
 			else
@@ -940,13 +937,9 @@ bool CGameContext::OnClientDDNetVersionKnown(int ClientID)
 		return true;
 	}
 
-	CPlayer *pPlayer = m_apPlayers[ClientID];
-	if(ClientVersion >= VERSION_DDNET_GAMETICK)
-		pPlayer->m_TimerType = 0;
-
 	// And report correct tunings.
 	if(ClientVersion >= VERSION_DDNET_EXTRATUNES)
-		SendTuningParams(ClientID, pPlayer->m_TuneZone);
+		SendTuningParams(ClientID, m_apPlayers[ClientID]->m_TuneZone);
 
 	return false;
 }
@@ -1156,10 +1149,8 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 				*(const_cast<char *>(pEnd)) = 0;
 
 			// drop empty and autocreated spam messages (more than 32 characters per second)
-			if(Length == 0 || (pMsg->m_pMessage[0] != '/' && (g_Config.m_SvSpamprotection && pPlayer->m_LastChat && pPlayer->m_LastChat + Server()->TickSpeed() * ((31 + Length) / 32) > Server()->Tick())))
+			if(Length == 0 || (pMsg->m_pMessage[0] != '/' && g_Config.m_SvSpamprotection))
 				return;
-
-			pPlayer->UpdatePlaytime();
 
 			Team = CHAT_ALL;
 
@@ -1188,6 +1179,9 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 					char aWhisperMsg[256];
 					str_copy(aWhisperMsg, pMsg->m_pMessage + 10, 256);
 					Converse(pPlayer->GetCID(), aWhisperMsg);
+				}
+				else if(str_comp_nocase_num(pMsg->m_pMessage + 1, "timeout ", 8) == 0)
+				{
 				}
 				else
 				{
@@ -1232,20 +1226,12 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 		}
 		else if(MsgID == NETMSGTYPE_CL_CALLVOTE)
 		{
-			m_apPlayers[ClientID]->UpdatePlaytime();
-
 			VoteManager()->TryCallVote(ClientID, (CNetMsg_Cl_CallVote *)pRawMsg);
 		}
 		else if(MsgID == NETMSGTYPE_CL_VOTE)
 		{
 			if(!VoteManager()->IsActive())
 				return;
-
-			if(g_Config.m_SvSpamprotection && pPlayer->m_LastVoteTry && pPlayer->m_LastVoteTry + Server()->TickSpeed() * 3 > Server()->Tick())
-				return;
-
-			pPlayer->m_LastVoteTry = Server()->Tick();
-			pPlayer->UpdatePlaytime();
 
 			CNetMsg_Cl_Vote *pMsg = (CNetMsg_Cl_Vote *)pRawMsg;
 			if(!pMsg->m_Vote)
@@ -1259,20 +1245,8 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 		{
 			CNetMsg_Cl_SetTeam *pMsg = (CNetMsg_Cl_SetTeam *)pRawMsg;
 
-			if(pPlayer->GetTeam() == pMsg->m_Team || (g_Config.m_SvSpamprotection && pPlayer->m_LastSetTeam && pPlayer->m_LastSetTeam + Server()->TickSpeed() * g_Config.m_SvTeamChangeDelay > Server()->Tick()))
+			if(pPlayer->GetTeam() == pMsg->m_Team)
 				return;
-
-			if(pPlayer->m_TeamChangeTick > Server()->Tick())
-			{
-				pPlayer->m_LastSetTeam = Server()->Tick();
-				int TimeLeft = (pPlayer->m_TeamChangeTick - Server()->Tick()) / Server()->TickSpeed();
-				char aTime[32];
-				str_time((int64)TimeLeft * 100, TIME_HOURS, aTime, sizeof(aTime));
-				char aBuf[128];
-				str_format(aBuf, sizeof(aBuf), "Time to wait before changing team: %s", aTime);
-				SendBroadcast(aBuf, ClientID);
-				return;
-			}
 
 			// Switch team on given client and kill/respawn him
 			if(m_pController->CanJoinTeam(pMsg->m_Team, ClientID))
@@ -1280,7 +1254,6 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 				if(pPlayer->GetTeam() == TEAM_SPECTATORS || pMsg->m_Team == TEAM_SPECTATORS)
 					VoteManager()->SetUpdating(true);
 				m_pController->DoTeamChange(pPlayer, pMsg->m_Team);
-				pPlayer->m_TeamChangeTick = Server()->Tick();
 			}
 			else
 			{
@@ -1328,11 +1301,6 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 				if(!Server()->ReverseTranslate(pMsg->m_SpectatorID, ClientID))
 					return;
 
-			if((g_Config.m_SvSpamprotection && pPlayer->m_LastSetSpectatorMode && pPlayer->m_LastSetSpectatorMode + Server()->TickSpeed() / 4 > Server()->Tick()))
-				return;
-
-			pPlayer->m_LastSetSpectatorMode = Server()->Tick();
-			pPlayer->UpdatePlaytime();
 			if(pMsg->m_SpectatorID >= 0 && (!m_apPlayers[pMsg->m_SpectatorID] || m_apPlayers[pMsg->m_SpectatorID]->GetTeam() == TEAM_SPECTATORS))
 				SendChatTarget(ClientID, "Invalid spectator id used");
 			else
@@ -1351,7 +1319,6 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 				return;
 			}
 			pPlayer->m_LastChangeInfo = Server()->Tick();
-			pPlayer->UpdatePlaytime();
 
 			// set infos
 			if(Server()->WouldClientNameChange(ClientID, pMsg->m_pName) && !ProcessSpamProtection(ClientID))
@@ -1437,15 +1404,9 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 		{
 			CNetMsg_Cl_Emoticon *pMsg = (CNetMsg_Cl_Emoticon *)pRawMsg;
 
-			if(g_Config.m_SvSpamprotection && pPlayer->m_LastEmote && pPlayer->m_LastEmote + Server()->TickSpeed() * g_Config.m_SvEmoticonDelay > Server()->Tick())
-				return;
-
-			pPlayer->m_LastEmote = Server()->Tick();
-			pPlayer->UpdatePlaytime();
-
 			SendEmoticon(ClientID, pMsg->m_Emoticon);
-			CCharacter *pChr = pPlayer->GetCharacter();
-			if(pChr && g_Config.m_SvEmotionalTees && pPlayer->m_EyeEmoteEnabled)
+			CCharacter *pChr = (CCharacter *)pPlayer;
+			if(pChr && g_Config.m_SvEmotionalTees)
 			{
 				int EmoteType = EMOTE_NORMAL;
 				switch(pMsg->m_Emoticon)
@@ -1484,15 +1445,10 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 		}
 		else if(MsgID == NETMSGTYPE_CL_KILL && !m_World.m_Paused)
 		{
-			if(pPlayer->m_LastKill && pPlayer->m_LastKill + Server()->TickSpeed() * g_Config.m_SvKillDelay > Server()->Tick())
+			if(!(CCharacter *)pPlayer)
 				return;
 
-			CCharacter *pChr = pPlayer->GetCharacter();
-			if(!pChr)
-				return;
-
-			pPlayer->m_LastKill = Server()->Tick();
-			pPlayer->KillCharacter(WEAPON_SELF);
+			// pPlayer->KillCharacter(WEAPON_SELF); // TODO: CHARACTER:
 			pPlayer->Respawn();
 		}
 	}
@@ -2482,17 +2438,14 @@ void CGameContext::OnSetAuthed(int ClientID, int Level)
 
 int CGameContext::ProcessSpamProtection(int ClientID)
 {
+	return 0; // TODO: SPAMPROTECTION:
 	if(!m_apPlayers[ClientID])
 		return 0;
-	if(g_Config.m_SvSpamprotection && m_apPlayers[ClientID]->m_LastChat && m_apPlayers[ClientID]->m_LastChat + Server()->TickSpeed() * g_Config.m_SvChatDelay > Server()->Tick())
-		return 1;
 	else if(g_Config.m_SvDnsblChat && Server()->DnsblBlack(ClientID))
 	{
 		SendChatTarget(ClientID, "Players are not allowed to chat from VPNs at this time");
 		return 1;
 	}
-	else
-		m_apPlayers[ClientID]->m_LastChat = Server()->Tick();
 
 	NETADDR Addr;
 	Server()->GetClientAddr(ClientID, &Addr);

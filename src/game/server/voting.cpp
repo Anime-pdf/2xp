@@ -69,7 +69,6 @@ void CVoteManager::CallVote(int ClientID, const char *pDesc, const char *pCmd, c
 	StartVote(pDesc, pCmd, pReason, pSixupDesc);
 	pPlayer->m_Vote = 1;
 	pPlayer->m_VotePos = m_VotePos = 1;
-	pPlayer->m_LastVoteCall = Server()->Tick();
 }
 
 void CVoteManager::StartVote(const char *pDesc, const char *pCommand, const char *pReason, const char *pSixupDesc)
@@ -223,9 +222,6 @@ void CVoteManager::Tick()
 			Server()->SetRconCID(IServer::RCON_CID_VOTE);
 			GameServer()->Console()->ExecuteLine(m_aVoteCommand);
 			Server()->SetRconCID(IServer::RCON_CID_SERV);
-
-			if(GameServer()->GetPlayer(m_VoteCreator))
-				GameServer()->GetPlayer(m_VoteCreator)->m_LastVoteCall = 0;
 		}
 		else
 		{
@@ -477,22 +473,10 @@ void CVoteManager::TryCallVote(int ClientID, CNetMsg_Cl_CallVote *pMsg)
 	else if(str_comp_nocase(pMsg->m_Type, "kick") == 0)
 	{
 		int Authed = Server()->GetAuthedState(ClientID);
-		if(!Authed && time_get() < pPlayer->m_Last_KickVote + (time_freq() * 5))
-			return;
-		else if(!Authed && time_get() < pPlayer->m_Last_KickVote + (time_freq() * GameServer()->Config()->m_SvVoteKickDelay))
-		{
-			str_format(aChatmsg, sizeof(aChatmsg), "There's a %d second wait time between kick votes for each player please wait %d second(s)",
-				GameServer()->Config()->m_SvVoteKickDelay,
-				(int)(((pPlayer->m_Last_KickVote + (pPlayer->m_Last_KickVote * time_freq())) / time_freq()) - (time_get() / time_freq())));
-			GameServer()->SendChatTarget(ClientID, aChatmsg);
-			pPlayer->m_Last_KickVote = time_get();
-			return;
-		}
-		//else if(!GameServer()->Config()->m_SvVoteKick)
-		else if(!GameServer()->Config()->m_SvVoteKick && !Authed) // allow admins to call kick votes even if they are forbidden
+
+		if(!GameServer()->Config()->m_SvVoteKick && !Authed) // allow admins to call kick votes even if they are forbidden
 		{
 			GameServer()->SendChatTarget(ClientID, "Server does not allow voting to kick players");
-			pPlayer->m_Last_KickVote = time_get();
 			return;
 		}
 
@@ -516,7 +500,6 @@ void CVoteManager::TryCallVote(int ClientID, CNetMsg_Cl_CallVote *pMsg)
 		if(KickedAuthed > Authed)
 		{
 			GameServer()->SendChatTarget(ClientID, "You can't kick authorized players");
-			pPlayer->m_Last_KickVote = time_get();
 			char aBufKick[128];
 			str_format(aBufKick, sizeof(aBufKick), "'%s' called for vote to kick you", Server()->ClientName(ClientID));
 			GameServer()->SendChatTarget(KickID, aBufKick);
@@ -526,7 +509,6 @@ void CVoteManager::TryCallVote(int ClientID, CNetMsg_Cl_CallVote *pMsg)
 		str_format(aChatmsg, sizeof(aChatmsg), "'%s' called for vote to kick '%s' (%s)", Server()->ClientName(ClientID), Server()->ClientName(KickID), aReason);
 		str_format(aSixupDesc, sizeof(aSixupDesc), "%2d: %s", KickID, Server()->ClientName(KickID));
 
-		pPlayer->m_Last_KickVote = time_get();
 		m_VoteType = VOTE_TYPE_KICK;
 		m_VoteVictim = KickID;
 	}

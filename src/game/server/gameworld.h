@@ -27,6 +27,7 @@ public:
 		ENTTYPE_CHARACTER,
 		// 2xp
 		ENTTYPE_BUILDING,
+		ENTTYPE_C4,
 		NUM_ENTTYPES
 	};
 

@@ -115,7 +115,7 @@ void CProjectile::Tick()
 	CCharacter *pOwnerChar = 0;
 
 	if(m_Owner >= 0)
-		pOwnerChar = GameServer()->GetPlayerChar(m_Owner);
+		pOwnerChar = GameServer()->GetCharacter(m_Owner);
 
 	CCharacter *pTargetChr = 0;
 
@@ -163,7 +163,7 @@ void CProjectile::Tick()
 		if(m_Explosive)
 		{
 			if(m_Owner >= 0)
-				pOwnerChar = GameServer()->GetPlayerChar(m_Owner);
+				pOwnerChar = GameServer()->GetCharacter(m_Owner);
 
 			GameServer()->CreateExplosion(ColPos, m_Owner, m_Type, m_Owner);
 			GameServer()->CreateSound(ColPos, m_SoundImpact);

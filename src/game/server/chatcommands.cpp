@@ -133,117 +133,6 @@ void CGameContext::ConWhisper(IConsole::IResult *pResult, void *pUserData)
 	// This will never be called
 }
 
-void CGameContext::ConSetEyeEmote(IConsole::IResult *pResult, void *pUserData)
-{
-	CGameContext *pSelf = (CGameContext *)pUserData;
-	if(!IsValidCID(pResult->m_ClientID))
-		return;
-
-	CPlayer *pPlayer = pSelf->m_apPlayers[pResult->m_ClientID];
-	if(!pPlayer)
-		return;
-	if(pResult->NumArguments() == 0)
-	{
-		pSelf->Console()->Print(
-			IConsole::OUTPUT_LEVEL_STANDARD,
-			"emote",
-			(pPlayer->m_EyeEmoteEnabled) ?
-				"You can now use the preset eye emotes." :
-				"You don't have any eye emotes, remember to bind some. (until you die)");
-		return;
-	}
-	else if(str_comp_nocase(pResult->GetString(0), "on") == 0)
-		pPlayer->m_EyeEmoteEnabled = true;
-	else if(str_comp_nocase(pResult->GetString(0), "off") == 0)
-		pPlayer->m_EyeEmoteEnabled = false;
-	else if(str_comp_nocase(pResult->GetString(0), "toggle") == 0)
-		pPlayer->m_EyeEmoteEnabled = !pPlayer->m_EyeEmoteEnabled;
-	pSelf->Console()->Print(
-		IConsole::OUTPUT_LEVEL_STANDARD,
-		"emote",
-		(pPlayer->m_EyeEmoteEnabled) ?
-			"You can now use the preset eye emotes." :
-			"You don't have any eye emotes, remember to bind some. (until you die)");
-}
-
-void CGameContext::ConEyeEmote(IConsole::IResult *pResult, void *pUserData)
-{
-	CGameContext *pSelf = (CGameContext *)pUserData;
-	if(g_Config.m_SvEmotionalTees == -1)
-	{
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "emote",
-			"Emotes are disabled.");
-		return;
-	}
-
-	if(!IsValidCID(pResult->m_ClientID))
-		return;
-
-	CPlayer *pPlayer = pSelf->m_apPlayers[pResult->m_ClientID];
-	if(!pPlayer)
-		return;
-
-	if(pResult->NumArguments() == 0)
-	{
-		pSelf->Console()->Print(
-			IConsole::OUTPUT_LEVEL_STANDARD,
-			"emote",
-			"Emote commands are: /emote surprise /emote blink /emote close /emote angry /emote happy /emote pain");
-		pSelf->Console()->Print(
-			IConsole::OUTPUT_LEVEL_STANDARD,
-			"emote",
-			"Example: /emote surprise 10 for 10 seconds or /emote surprise (default 1 second)");
-	}
-	else
-	{
-		if(!pPlayer->CanOverrideDefaultEmote())
-			return;
-
-		int EmoteType = 0;
-		if(!str_comp(pResult->GetString(0), "angry"))
-			EmoteType = EMOTE_ANGRY;
-		else if(!str_comp(pResult->GetString(0), "blink"))
-			EmoteType = EMOTE_BLINK;
-		else if(!str_comp(pResult->GetString(0), "close"))
-			EmoteType = EMOTE_BLINK;
-		else if(!str_comp(pResult->GetString(0), "happy"))
-			EmoteType = EMOTE_HAPPY;
-		else if(!str_comp(pResult->GetString(0), "pain"))
-			EmoteType = EMOTE_PAIN;
-		else if(!str_comp(pResult->GetString(0), "surprise"))
-			EmoteType = EMOTE_SURPRISE;
-		else if(!str_comp(pResult->GetString(0), "normal"))
-			EmoteType = EMOTE_NORMAL;
-		else
-		{
-			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD,
-				"emote", "Unknown emote... Say /emote");
-			return;
-		}
-
-		int Duration = 1;
-		if(pResult->NumArguments() > 1)
-			Duration = clamp(pResult->GetInteger(1), 1, 86400);
-
-		pPlayer->OverrideDefaultEmote(EmoteType, pSelf->Server()->Tick() + Duration * pSelf->Server()->TickSpeed());
-	}
-}
-
-void CGameContext::ConNinjaJetpack(IConsole::IResult *pResult, void *pUserData)
-{
-	CGameContext *pSelf = (CGameContext *)pUserData;
-	if(!IsValidCID(pResult->m_ClientID))
-		return;
-
-	CPlayer *pPlayer = pSelf->m_apPlayers[pResult->m_ClientID];
-	if(!pPlayer)
-		return;
-	if(pResult->NumArguments())
-		pPlayer->m_NinjaJetpack = pResult->GetInteger(0);
-	else
-		pPlayer->m_NinjaJetpack = !pPlayer->m_NinjaJetpack;
-}
-
 void CGameContext::ConPlayerLogin(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
@@ -339,8 +228,8 @@ void CGameContext::ConBuildingMode(IConsole::IResult *pResult, void *pUserData)
 	CGameContext *pSelf = (CGameContext *)pUserData;
 	if(!IsValidCID(pResult->m_ClientID))
 		return;
-	if(pSelf->m_apPlayers[pResult->m_ClientID]->HasNoCharacter())
+	if(!pSelf->GetPlayer(pResult->m_ClientID)->IsPlaying())
 		return;
 
-	pSelf->m_apPlayers[pResult->m_ClientID]->GetCharacter()->m_Builder = !pSelf->m_apPlayers[pResult->m_ClientID]->GetCharacter()->m_Builder;
+	pSelf->GetCharacter(pResult->m_ClientID)->m_Builder = !pSelf->GetCharacter(pResult->m_ClientID)->m_Builder;
 }

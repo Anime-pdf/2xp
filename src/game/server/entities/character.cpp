@@ -14,6 +14,7 @@
 
 // 2xp
 #include "mod/building.h"
+#include "mod/c4.h"
 
 MACRO_ALLOC_POOL_ID_IMPL(CCharacter, MAX_CLIENTS)
 
@@ -327,6 +328,9 @@ void CCharacter::FireWeapon()
 			if(GameServer()->m_World.FindEntities(BuildingPos, GetProximityRadius(), (CEntity **)aBuilding,
 				   1, CGameWorld::ENTTYPE_BUILDING))
 				aBuilding[0]->Destroy();
+
+			if(!GameServer()->Collision()->IsSolid(ProjStartPos.x, ProjStartPos.y))
+				new CC4(GameWorld(), ProjStartPos, m_pPlayer->GetCID());
 		}
 
 		apEnts[0] = 0;
@@ -683,7 +687,7 @@ void CCharacter::Tick()
 	// set emote
 	if(m_EmoteStop < Server()->Tick())
 	{
-		m_EmoteType = m_pPlayer->GetDefaultEmote();
+		m_EmoteType = EMOTE_ANGRY;
 		m_EmoteStop = -1;
 	}
 
@@ -874,14 +878,16 @@ void CCharacter::Die(int Killer, int Weapon)
 	GameServer()->m_World.RemoveEntity(this);
 	GameServer()->m_World.m_Core.m_apCharacters[m_pPlayer->GetCID()] = 0;
 	GameServer()->CreateDeath(m_Pos, m_pPlayer->GetCID());
+
+	m_pPlayer->TryRespawn();
 }
 
 bool CCharacter::TakeDamage(vec2 Force, int Dmg, int From, int Weapon)
 {
-	/*m_Core.m_Vel += Force;
+	m_Core.m_Vel += Force;
 
-	if(GameServer()->m_pController->IsFriendlyFire(m_pPlayer->GetCID(), From) && !g_Config.m_SvTeamdamage)
-		return false;
+	//if(GameServer()->m_pController->IsFriendlyFire(m_pPlayer->GetCID(), From))
+	//	return false;
 
 	// m_pPlayer only inflicts half damage on self
 	if(From == m_pPlayer->GetCID())
@@ -931,13 +937,7 @@ bool CCharacter::TakeDamage(vec2 Force, int Dmg, int From, int Weapon)
 	// do damage Hit sound
 	if(From >= 0 && From != m_pPlayer->GetCID() && GameServer()->m_apPlayers[From])
 	{
-		int64 Mask = CmaskOne(From);
-		for(int i = 0; i < MAX_CLIENTS; i++)
-		{
-			if(GameServer()->m_apPlayers[i] && GameServer()->m_apPlayers[i]->GetTeam() == TEAM_SPECTATORS && GameServer()->m_apPlayers[i]->m_SpectatorID == From)
-				Mask |= CmaskOne(i);
-		}
-		GameServer()->CreateSound(GameServer()->m_apPlayers[From]->m_ViewPos, SOUND_HIT, Mask);
+		GameServer()->CreateSound(GameServer()->m_apPlayers[From]->m_ViewPos, SOUND_HIT);
 	}
 
 	// check for death
@@ -948,7 +948,7 @@ bool CCharacter::TakeDamage(vec2 Force, int Dmg, int From, int Weapon)
 		// set attacker's face to happy (taunt!)
 		if (From >= 0 && From != m_pPlayer->GetCID() && GameServer()->m_apPlayers[From])
 		{
-			CCharacter *pChr = GameServer()->m_apPlayers[From]->GetCharacter();
+			CCharacter *pChr = GameServer()->GetCharacter(From);
 			if (pChr)
 			{
 				pChr->m_EmoteType = EMOTE_HAPPY;
@@ -962,7 +962,7 @@ bool CCharacter::TakeDamage(vec2 Force, int Dmg, int From, int Weapon)
 	if (Dmg > 2)
 		GameServer()->CreateSound(m_Pos, SOUND_PLAYER_PAIN_LONG);
 	else
-		GameServer()->CreateSound(m_Pos, SOUND_PLAYER_PAIN_SHORT);*/
+		GameServer()->CreateSound(m_Pos, SOUND_PLAYER_PAIN_SHORT);
 
 	if(Dmg)
 	{

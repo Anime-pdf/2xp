@@ -526,33 +526,6 @@ void CConnectionPool::SPS(const char* T, SqlArgs A)
 			}
 		}
 
-		//for(int index = 0; index < AN; ++index)
-		//{
-		//	if(A->type().name() )
-		//	{
-		//	case SQL_TYPE_STRING:
-		//	{
-		//		ps->setString(index + 1, (const char *)(((SSqlString *)(A + index))->Get()));
-		//		dbg_msg("sql", "here str");
-		//		break;
-		//	}
-		//	case SQL_TYPE_BLOB:
-		//	{
-		//		ps->setBlob(index + 1, (std::istream *)((SSqlBlob *)(A + index)->Get()));
-		//		dbg_msg("sql", "here blob");
-		//		break;
-		//	}
-		//	case SQL_TYPE_INT:
-		//	{
-		//		ps->setInt(index + 1, (int)((size_t)(A + index)->Get())); // warning C4311: 'type cast': pointer truncation from 'void *' to 'int'
-		//		break;
-		//	}
-		//	default:
-		//		dbg_msg("sql", "here ????");
-		//		break;
-		//	}
-		//}
-
 		pPS->execute();
 
 		delete pPS;

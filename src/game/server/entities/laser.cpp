@@ -29,7 +29,7 @@ CLaser::CLaser(CGameWorld *pGameWorld, vec2 Pos, vec2 Direction, float StartEner
 bool CLaser::HitCharacter(vec2 From, vec2 To)
 {
 	vec2 At;
-	CCharacter *pOwnerChar = GameServer()->GetPlayerChar(m_Owner);
+	CCharacter *pOwnerChar = GameServer()->GetCharacter(m_Owner);
 	CCharacter *pHit;
 	bool pDontHitSelf = m_Bounces == 0 && !m_WasTele;
 

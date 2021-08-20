@@ -141,7 +141,7 @@ public:
 	CGameWorld m_World;
 
 	// helper functions
-	class CCharacter *GetPlayerChar(int ClientID);
+	class CCharacter *GetCharacter(int ClientID);
 	CPlayer *GetPlayer(int ClientID);
 
 	char m_aaZoneEnterMsg[NUM_TUNEZONES][256]; // 0 is used for switching from or to area without tunings
@@ -180,7 +180,7 @@ public:
 	void SendWeaponPickup(int ClientID, int Weapon);
 	void SendMotd(int ClientID);
 	void SendSettings(int ClientID);
-	void SendBroadcast(const char *pText, int ClientID, bool IsImportant = true);
+	void SendBroadcast(const char *pText, int ClientID);
 	void SendBroadcastToActivePlayers(const char *pText);
 
 	void List(int ClientID, const char *filter);
@@ -272,9 +272,6 @@ private:
 	static void ConMe(IConsole::IResult *pResult, void *pUserData);
 	static void ConWhisper(IConsole::IResult *pResult, void *pUserData);
 	static void ConConverse(IConsole::IResult *pResult, void *pUserData);
-	static void ConSetEyeEmote(IConsole::IResult *pResult, void *pUserData);
-	static void ConEyeEmote(IConsole::IResult *pResult, void *pUserData);
-	static void ConNinjaJetpack(IConsole::IResult *pResult, void *pUserData);
 
 	static void ConVoteMute(IConsole::IResult *pResult, void *pUserData);
 	static void ConVoteUnmute(IConsole::IResult *pResult, void *pUserData);

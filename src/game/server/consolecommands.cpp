@@ -60,7 +60,7 @@ void CGameContext::ConMoveRaw(IConsole::IResult *pResult, void *pUserData)
 
 void CGameContext::MoveCharacter(int ClientID, int X, int Y, bool Raw)
 {
-	CCharacter *pChr = GetPlayerChar(ClientID);
+	CCharacter *pChr = GetCharacter(ClientID);
 
 	if(!pChr)
 		return;
@@ -78,7 +78,7 @@ void CGameContext::ConKillPlayer(IConsole::IResult *pResult, void *pUserData)
 
 	if(pSelf->m_apPlayers[Victim])
 	{
-		pSelf->m_apPlayers[Victim]->KillCharacter(WEAPON_GAME);
+		// pSelf->m_apPlayers[Victim]->KillCharacter(WEAPON_GAME); // TODO: CHARACTER:
 		char aBuf[512];
 		str_format(aBuf, sizeof(aBuf), "%s was killed by %s",
 			pSelf->Server()->ClientName(Victim),
@@ -157,7 +157,7 @@ void CGameContext::ModifyWeapons(IConsole::IResult *pResult, void *pUserData,
 	int Weapon, bool Remove)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
-	CCharacter *pChr = GetPlayerChar(pResult->m_ClientID);
+	CCharacter *pChr = GetCharacter(pResult->m_ClientID);
 	if(!pChr)
 		return;
 
@@ -188,7 +188,7 @@ void CGameContext::ConToTeleporter(IConsole::IResult *pResult, void *pUserData)
 
 	if(pGameControllerDDRace->m_TeleOuts[TeleTo - 1].size())
 	{
-		CCharacter *pChr = pSelf->GetPlayerChar(pResult->m_ClientID);
+		CCharacter *pChr = pSelf->GetCharacter(pResult->m_ClientID);
 		if(pChr)
 		{
 			int TeleOut = pSelf->m_World.m_Core.RandomOr0(pGameControllerDDRace->m_TeleOuts[TeleTo - 1].size());
@@ -213,8 +213,8 @@ void CGameContext::ConTeleport(IConsole::IResult *pResult, void *pUserData)
 		return;
 	}
 
-	CCharacter *pChr = pSelf->GetPlayerChar(Tele);
-	if(pChr && pSelf->GetPlayerChar(TeleTo))
+	CCharacter *pChr = pSelf->GetCharacter(Tele);
+	if(pChr && pSelf->GetCharacter(TeleTo))
 	{
 		pChr->Core()->m_Pos = pSelf->m_apPlayers[TeleTo]->m_ViewPos;
 		pChr->m_Pos = pSelf->m_apPlayers[TeleTo]->m_ViewPos;
@@ -229,11 +229,7 @@ void CGameContext::ConKill(IConsole::IResult *pResult, void *pUserData)
 		return;
 	CPlayer *pPlayer = pSelf->m_apPlayers[pResult->m_ClientID];
 
-	if(!pPlayer || (pPlayer->m_LastKill && pPlayer->m_LastKill + pSelf->Server()->TickSpeed() * g_Config.m_SvKillDelay > pSelf->Server()->Tick()))
-		return;
-
-	pPlayer->m_LastKill = pSelf->Server()->Tick();
-	pPlayer->KillCharacter(WEAPON_SELF);
+	// pPlayer->KillCharacter(WEAPON_SELF); // TODO: CHARACTER:
 	//pPlayer->m_RespawnTick = pSelf->Server()->Tick() + pSelf->Server()->TickSpeed() * g_Config.m_SvSuicidePenalty;
 }
 

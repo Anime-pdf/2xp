@@ -32,8 +32,6 @@ public:
 	void Respawn(); // with WeakHook == true the character will be spawned after all calls of Tick from other Players
 	void SetTeam(int Team);
 	int GetTeam() const { return m_Team; };
-	void SetGameTeam(int Team, bool DoChatMsg = true);
-	int GetGameTeam() const { return m_GameTeam; }
 	int GetCID() const { return m_ClientID; };
 	int GetClientVersion() const;
 
@@ -49,10 +47,6 @@ public:
 	void OnPredictedInput(CNetObj_PlayerInput *NewInput);
 	void OnPredictedEarlyInput(CNetObj_PlayerInput *NewInput);
 	void OnDisconnect();
-
-	void KillCharacter(int Weapon = WEAPON_GAME);
-	CCharacter *GetCharacter();
-	bool HasNoCharacter() const { return !m_pCharacter || (m_pCharacter && !m_pCharacter->IsAlive()); }
 
 	CAccount *GetAccount() const { return m_pAccount; }
 	void SetAccount(CAccount *pNewAccount) { m_pAccount = pNewAccount; }
@@ -80,14 +74,7 @@ public:
 	int m_Vote;
 	int m_VotePos;
 	//
-	int m_LastVoteCall;
-	int m_LastVoteTry;
-	int m_LastChat;
-	int m_LastSetTeam;
-	int m_LastSetSpectatorMode;
 	int m_LastChangeInfo;
-	int m_LastEmote;
-	int m_LastKill;
 	int m_LastCommands[4];
 	int m_LastCommandPos;
 	int m_LastWhisperTo;
@@ -99,10 +86,6 @@ public:
 	int m_DieTick;
 	int m_PreviousDieTick;
 	int m_Score;
-	int m_JoinTick;
-	bool m_ForceBalanced;
-	int m_LastActionTick;
-	int m_TeamChangeTick;
 	struct
 	{
 		int m_TargetX;
@@ -110,6 +93,7 @@ public:
 	} m_LatestActivity;
 
 	// network latency calculations
+
 	struct
 	{
 		int m_Accum;
@@ -130,58 +114,19 @@ private:
 	IServer *Server() const;
 
 	//
-	bool m_Spawning;
+	bool m_SpawnNextTick;
 	int m_ClientID;
 	int m_Team;
-	int m_GameTeam;
-
-	int m_DefEmote;
-	int m_OverrideEmote;
-	int m_OverrideEmoteReset;
 public:
-	enum
-	{
-		TIMERTYPE_DEFAULT = -1,
-		TIMERTYPE_GAMETIMER = 0,
-		TIMERTYPE_BROADCAST,
-		TIMERTYPE_GAMETIMER_AND_BROADCAST,
-		TIMERTYPE_SIXUP,
-		TIMERTYPE_NONE,
-	};
-
-	int64 m_FirstVoteTick;
-
 	bool IsPlaying();
-	int64 m_Last_KickVote;
-	int64 m_Last_Team;
 	vec2 m_ShowDistance;
-	bool m_NinjaJetpack;
 	bool m_Afk;
 
 	int m_ChatScore;
 
-	bool AfkTimer(int new_target_x, int new_target_y); //returns true if kicked
-	void UpdatePlaytime();
-	void AfkVoteTimer(CNetObj_PlayerInput *NewTarget);
-	int64 m_LastPlaytime;
-	int64 m_LastEyeEmote;
-	int64 m_LastBroadcast;
-	bool m_LastBroadcastImportance;
-	int m_LastTarget_x;
-	int m_LastTarget_y;
-	CNetObj_PlayerInput *m_pLastTarget;
-	int m_Sent1stAfkWarning; // afk timer's 1st warning after 50% of sv_max_afk_time
-	int m_Sent2ndAfkWarning; // afk timer's 2nd warning after 90% of sv_max_afk_time
-	char m_pAfkMsg[160];
-	bool m_EyeEmoteEnabled;
-	int m_TimerType;
-
-	int GetDefaultEmote() const;
-	void OverrideDefaultEmote(int Emote, int Tick);
-	bool CanOverrideDefaultEmote() const;
-
-	bool m_FirstPacket;
 	int64 m_LastSQLQuery;
+
+	explicit operator CCharacter *() const { return m_pCharacter; }
 };
 
 #endif

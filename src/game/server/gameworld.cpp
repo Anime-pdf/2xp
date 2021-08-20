@@ -167,33 +167,37 @@ void CGameWorld::UpdatePlayerMaps()
 			continue;
 		int *pMap = Server()->GetIdMap(i);
 
+		CPlayer *pFirstPlayer = GameServer()->GetPlayer(i);
+		CCharacter *pFirstCharacter = (CCharacter *)pFirstPlayer;
+
 		// compute distances
 		for(int j = 0; j < MAX_CLIENTS; j++)
 		{
 			Dist[j].second = j;
-			if(!Server()->ClientIngame(j) || !GameServer()->m_apPlayers[j])
+
+			CPlayer *pSecondPlayer = GameServer()->GetPlayer(j);
+			CCharacter *pSecondCharacter = (CCharacter *)pSecondPlayer;
+
+			if(!Server()->ClientIngame(j) || !pSecondPlayer)
 			{
 				Dist[j].first = 1e10;
 				continue;
 			}
-			CCharacter *ch = GameServer()->m_apPlayers[j]->GetCharacter();
-			if(!ch)
+			if(!pSecondCharacter)
 			{
 				Dist[j].first = 1e9;
 				continue;
 			}
-			// copypasted chunk from character.cpp Snap() follows
-			CCharacter *SnapChar = GameServer()->GetPlayerChar(i);
-			if(SnapChar &&
-				GameServer()->m_apPlayers[i]->GetTeam() != TEAM_SPECTATORS &&
-				(!GameServer()->m_apPlayers[i] ||
-					GameServer()->m_apPlayers[i]->GetClientVersion() == VERSION_VANILLA ||
-					GameServer()->m_apPlayers[i]->GetClientVersion() >= VERSION_DDRACE))
+			if(pFirstCharacter &&
+				pFirstPlayer->GetTeam() != TEAM_SPECTATORS &&
+				(!pFirstPlayer ||
+					pFirstPlayer->GetClientVersion() == VERSION_VANILLA ||
+					pFirstPlayer->GetClientVersion() >= VERSION_DDRACE))
 				Dist[j].first = 1e8;
 			else
 				Dist[j].first = 0;
 
-			Dist[j].first += distance(GameServer()->m_apPlayers[i]->m_ViewPos, GameServer()->m_apPlayers[j]->GetCharacter()->m_Pos);
+			Dist[j].first += distance(pFirstPlayer->m_ViewPos, pSecondCharacter->m_Pos);
 		}
 
 		// always send the player himself
