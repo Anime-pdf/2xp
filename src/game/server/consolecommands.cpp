@@ -78,7 +78,7 @@ void CGameContext::ConKillPlayer(IConsole::IResult *pResult, void *pUserData)
 
 	if(pSelf->m_apPlayers[Victim])
 	{
-		// pSelf->m_apPlayers[Victim]->KillCharacter(WEAPON_GAME); // TODO: CHARACTER:
+		pSelf->GetCharacter(Victim)->Die(Victim, WEAPON_GAME); // TODO: CHARACTER:
 		char aBuf[512];
 		str_format(aBuf, sizeof(aBuf), "%s was killed by %s",
 			pSelf->Server()->ClientName(Victim),
@@ -227,10 +227,7 @@ void CGameContext::ConKill(IConsole::IResult *pResult, void *pUserData)
 	CGameContext *pSelf = (CGameContext *)pUserData;
 	if(!IsValidCID(pResult->m_ClientID))
 		return;
-	CPlayer *pPlayer = pSelf->m_apPlayers[pResult->m_ClientID];
-
-	// pPlayer->KillCharacter(WEAPON_SELF); // TODO: CHARACTER:
-	//pPlayer->m_RespawnTick = pSelf->Server()->Tick() + pSelf->Server()->TickSpeed() * g_Config.m_SvSuicidePenalty;
+	pSelf->GetCharacter(pResult->m_ClientID)->Die(pResult->m_ClientID, WEAPON_SELF);
 }
 
 bool CGameContext::TryVoteMute(const NETADDR *pAddr, int Secs)

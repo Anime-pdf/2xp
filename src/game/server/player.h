@@ -29,10 +29,12 @@ public:
 	void Reset();
 
 	void TryRespawn();
-	void Respawn(); // with WeakHook == true the character will be spawned after all calls of Tick from other Players
+	void Respawn();
 	void SetTeam(int Team);
 	int GetTeam() const { return m_Team; };
 	int GetCID() const { return m_ClientID; };
+	bool Spectator() const { return m_Spectator; }
+	void SetSpectator(bool State) { m_Spectator = State; }
 	int GetClientVersion() const;
 
 	void Tick();
@@ -72,7 +74,6 @@ public:
 
 	//
 	int m_Vote;
-	int m_VotePos;
 	//
 	int m_LastChangeInfo;
 	int m_LastCommands[4];
@@ -114,6 +115,7 @@ private:
 	IServer *Server() const;
 
 	//
+	bool m_Spectator;
 	bool m_SpawnNextTick;
 	int m_ClientID;
 	int m_Team;

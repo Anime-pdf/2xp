@@ -47,7 +47,6 @@ class CVoteManager
 	int m_VoteType;
 	int64 m_VoteCloseTime;
 	bool m_VoteUpdate;
-	int m_VotePos;
 	char m_aVoteDescription[VOTE_DESC_LENGTH];
 	char m_aSixupVoteDescription[VOTE_DESC_LENGTH];
 	char m_aVoteCommand[VOTE_CMD_LENGTH];
@@ -80,7 +79,6 @@ public:
 	char GetState() const { return m_VoteState; }
 	int GetVictim() const { return m_VoteVictim; }
 	int GetEnforcer() const { return m_VoteEnforcer; }
-	int GetVotePos() { return ++m_VotePos; }
 	struct CVoteOptionServer *GetVoteOption(int Index);
 	struct CVoteOptionServer *GetVoteOptionByDesc(const char* Desc);
 

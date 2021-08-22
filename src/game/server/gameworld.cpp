@@ -189,7 +189,7 @@ void CGameWorld::UpdatePlayerMaps()
 				continue;
 			}
 			if(pFirstCharacter &&
-				pFirstPlayer->GetTeam() != TEAM_SPECTATORS &&
+				!pFirstPlayer->Spectator() &&
 				(!pFirstPlayer ||
 					pFirstPlayer->GetClientVersion() == VERSION_VANILLA ||
 					pFirstPlayer->GetClientVersion() >= VERSION_DDRACE))

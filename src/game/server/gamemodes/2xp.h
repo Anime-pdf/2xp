@@ -14,7 +14,6 @@ public:
 	~CGCTXP();
 
 	virtual void OnCharacterSpawn(class CCharacter *pChr) override;
-	virtual void HandleCharacterTiles(class CCharacter *pChr, int MapIndex) override;
 
 	virtual void OnPlayerConnect(class CPlayer *pPlayer) override;
 	virtual void OnPlayerDisconnect(class CPlayer *pPlayer, const char *pReason) override;

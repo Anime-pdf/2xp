@@ -27,14 +27,6 @@ struct CAntibotInputData
 	int m_TargetY;
 };
 
-// Defined by the network protocol, unlikely to change.
-//enum
-//{
-//	TEAM_SPECTATORS=-1,
-//	TEAM_RED=0,
-//	TEAM_BLUE=1,
-//};
-
 struct CAntibotCharacterData
 {
 	char m_aName[16];

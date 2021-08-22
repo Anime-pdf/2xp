@@ -148,7 +148,7 @@ void CPickup::Snap(int SnappingClient)
 
 	CCharacter *Char = GameServer()->GetCharacter(SnappingClient);
 
-	if(SnappingClient > -1 && GameServer()->m_apPlayers[SnappingClient]->GetTeam() == TEAM_SPECTATORS && GameServer()->m_apPlayers[SnappingClient]->m_SpectatorID != SPEC_FREEVIEW)
+	if(SnappingClient > -1 && GameServer()->m_apPlayers[SnappingClient]->Spectator() && GameServer()->m_apPlayers[SnappingClient]->m_SpectatorID != SPEC_FREEVIEW)
 		Char = GameServer()->GetCharacter(GameServer()->m_apPlayers[SnappingClient]->m_SpectatorID);
 
 	int Tick = (Server()->Tick() % Server()->TickSpeed()) % 11;

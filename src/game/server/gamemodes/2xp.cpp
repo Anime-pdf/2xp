@@ -27,11 +27,6 @@ void CGCTXP::OnCharacterSpawn(CCharacter *pChr)
 	pChr->SetTeleports(&m_TeleOuts, &m_TeleCheckOuts);
 }
 
-void CGCTXP::HandleCharacterTiles(CCharacter *pChr, int MapIndex)
-{
-
-}
-
 void CGCTXP::OnPlayerConnect(CPlayer *pPlayer)
 {
 	IGameController::OnPlayerConnect(pPlayer);
@@ -50,7 +45,6 @@ void CGCTXP::OnPlayerConnect(CPlayer *pPlayer)
 
 void CGCTXP::OnPlayerDisconnect(CPlayer *pPlayer, const char *pReason)
 {
-
 	IGameController::OnPlayerDisconnect(pPlayer, pReason);
 }
 
@@ -61,10 +55,6 @@ void CGCTXP::Tick()
 
 void CGCTXP::DoTeamChange(class CPlayer *pPlayer, int Team)
 {
-	Team = ClampTeam(Team);
-	if(Team == pPlayer->GetTeam())
-		return;
-
 	IGameController::DoTeamChange(pPlayer, Team);
 }
 

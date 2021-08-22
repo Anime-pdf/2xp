@@ -6,6 +6,8 @@
 #include <base/vmath.h>
 #include <engine/map.h>
 
+#include <deque>
+
 /*
 	Class: Game Controller
 		Controls the main game logic. Keeping track of team and player score,
@@ -13,8 +15,15 @@
 */
 class IGameController
 {
-	vec2 m_aaSpawnPoints[3][64];
-	int m_aNumSpawnPoints[3];
+	std::deque<vec2> m_aSpawnPoints;
+
+	enum
+	{
+		GAMESTATE_NONE,
+		GAMESTATE_START,
+		GAMESTATE_RUNNING,
+		GAMESTATE_END,
+	};
 
 	class CGameContext *m_pGameServer;
 	struct CConfig *m_pConfig;
@@ -27,34 +36,9 @@ protected:
 
 	void DoActivityCheck();
 
-	struct CSpawnEval
-	{
-		CSpawnEval()
-		{
-			m_Got = false;
-			m_FriendlyTeam = -1;
-			m_Pos = vec2(100, 100);
-		}
-
-		vec2 m_Pos;
-		bool m_Got;
-		int m_FriendlyTeam;
-		float m_Score;
-	};
-
-	float EvaluateSpawnPos(CSpawnEval *pEval, vec2 Pos);
-	void EvaluateSpawnType(CSpawnEval *pEval, int Type);
-
 	void ResetGame();
 
-	char m_aMapWish[MAX_MAP_LENGTH];
-
-	// for m_GameOverTick
-	enum
-	{
-		GCS_ROUND_RUNNING = -1,
-		GCS_ROUND_END = -2,
-	};
+	int m_GameState;
 
 	int m_RoundStartTick;
 	int m_GameOverTick;
@@ -64,10 +48,15 @@ protected:
 	int m_RoundCount;
 
 	int m_GameFlags;
-	int m_UnbalancedTick;
-	bool m_ForceBalanced;
 
 public:
+	enum
+	{
+		GAMETEAM_NONE,
+		GAMETEAM_HUMAN,
+		GAMETEAM_ZOMBIE
+	};
+
 	const char *m_pGameType;
 
 	IGameController(class CGameContext *pGameServer);
@@ -85,6 +74,7 @@ public:
 				weapon when switching team or player suicides.
 	*/
 	virtual int OnCharacterDeath(class CCharacter *pVictim, class CPlayer *pKiller, int Weapon);
+
 	/*
 		Function: OnCharacterSpawn
 			Called when a CCharacter spawns into the game world.
@@ -93,8 +83,6 @@ public:
 			chr - The CCharacter that was spawned.
 	*/
 	virtual void OnCharacterSpawn(class CCharacter *pChr);
-
-	virtual void HandleCharacterTiles(class CCharacter *pChr, int MapIndex);
 
 	/*
 		Function: OnEntity
@@ -109,6 +97,7 @@ public:
 			bool?
 	*/
 	virtual bool OnEntity(int Index, vec2 Pos, int Layer, int Flags, int Number = 0);
+	virtual void OnEntityEnd();
 
 	virtual void OnPlayerConnect(class CPlayer *pPlayer);
 	virtual void OnPlayerDisconnect(class CPlayer *pPlayer, const char *pReason);
@@ -145,20 +134,11 @@ public:
 
 	*/
 	virtual const char *GetTeamName(int Team);
-	virtual int GetAutoTeam(int NotThisID);
 	virtual bool CanJoinTeam(int Team, int NotThisID);
 	int ClampTeam(int Team);
 
 	bool HandleWarmup(int Seconds);
 	bool ArePlayersEnough();
-
-	enum
-	{
-		TXP_TEAM_NONE,
-		TXP_TEAM_Z, // zombie
-		TXP_TEAM_H, // human
-		TXP_TEAM_DIED
-	};
 };
 
 #endif

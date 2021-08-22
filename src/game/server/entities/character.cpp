@@ -643,7 +643,7 @@ void CCharacter::OnDirectInput(CNetObj_PlayerInput *pNewInput)
 
 	Antibot()->OnDirectInput(m_pPlayer->GetCID());
 
-	if(m_NumInputs > 2 && m_pPlayer->GetTeam() != TEAM_SPECTATORS)
+	if(m_NumInputs > 2 && !m_pPlayer->Spectator())
 	{
 		HandleWeaponSwitch();
 		FireWeapon();
@@ -675,14 +675,8 @@ void CCharacter::ResetInput()
 
 void CCharacter::Tick()
 {
-	/*if(m_pPlayer->m_ForceBalanced)
-	{
-		char Buf[128];
-		str_format(Buf, sizeof(Buf), "You were moved to %s due to team balancing", GameServer()->m_pController->GetTeamName(m_pPlayer->GetTeam()));
-		GameServer()->SendBroadcast(Buf, m_pPlayer->GetCID());
-
-		m_pPlayer->m_ForceBalanced = false;
-	}*/
+	if(!IsAlive())
+		return;
 
 	// set emote
 	if(m_EmoteStop < Server()->Tick())
@@ -710,7 +704,7 @@ void CCharacter::Tick()
 
 	if(m_Core.m_TriggeredEvents & COREEVENT_HOOK_ATTACH_PLAYER)
 	{
-		if(m_Core.m_HookedPlayer != -1 && GameServer()->m_apPlayers[m_Core.m_HookedPlayer]->GetTeam() != TEAM_SPECTATORS)
+		if(m_Core.m_HookedPlayer != -1 && !GameServer()->m_apPlayers[m_Core.m_HookedPlayer]->Spectator())
 		{
 			Antibot()->OnHookAttach(m_pPlayer->GetCID(), true);
 		}
@@ -720,7 +714,6 @@ void CCharacter::Tick()
 	m_PrevInput = m_Input;
 
 	m_PrevPos = m_Core.m_Pos;
-	return;
 }
 
 void CCharacter::TickDefered()
@@ -792,7 +785,7 @@ void CCharacter::TickDefered()
 			GameServer()->CreateSound(m_Pos, SOUND_HOOK_NOATTACH);
 	}
 
-	if(m_pPlayer->GetTeam() == TEAM_SPECTATORS)
+	if(m_pPlayer->Spectator())
 	{
 		m_Pos.x = m_Input.m_TargetX;
 		m_Pos.y = m_Input.m_TargetY;
@@ -850,6 +843,8 @@ bool CCharacter::IncreaseArmor(int Amount)
 
 void CCharacter::Die(int Killer, int Weapon)
 {
+	if(!IsAlive())
+		return;
 	int ModeSpecial = GameServer()->m_pController->OnCharacterDeath(this, GameServer()->m_apPlayers[Killer], Weapon);
 
 	char aBuf[256];
@@ -878,8 +873,6 @@ void CCharacter::Die(int Killer, int Weapon)
 	GameServer()->m_World.RemoveEntity(this);
 	GameServer()->m_World.m_Core.m_apCharacters[m_pPlayer->GetCID()] = 0;
 	GameServer()->CreateDeath(m_Pos, m_pPlayer->GetCID());
-
-	m_pPlayer->TryRespawn();
 }
 
 bool CCharacter::TakeDamage(vec2 Force, int Dmg, int From, int Weapon)
@@ -979,6 +972,8 @@ bool CCharacter::TakeDamage(vec2 Force, int Dmg, int From, int Weapon)
 //TODO: Move the emote stuff to a function
 void CCharacter::SnapCharacter(int SnappingClient, int ID)
 {
+	if(!IsAlive())
+		return;
 	CCharacterCore *pCore;
 	int Tick, Emote = m_EmoteType, Weapon = m_Core.m_ActiveWeapon, AmmoCount = 0,
 		  Health = 0, Armor = 0;
@@ -1078,7 +1073,10 @@ void CCharacter::Snap(int SnappingClient)
 	if(SnappingClient > -1 && !Server()->Translate(ID, SnappingClient))
 		return;
 
-	if(NetworkClipped(SnappingClient) && GameServer()->GetPlayer(SnappingClient)->GetTeam() != TEAM_SPECTATORS)
+	if(NetworkClipped(SnappingClient) && !GameServer()->GetPlayer(SnappingClient)->Spectator())
+		return;
+
+	if(!IsAlive())
 		return;
 
 	SnapCharacter(SnappingClient, ID);
@@ -1250,17 +1248,12 @@ bool CCharacter::IsSwitchActiveCb(int Number, void *pUser)
 void CCharacter::HandleTiles(int Index)
 {
 	int MapIndex = Index;
-	//int PureMapIndex = GameServer()->Collision()->GetPureMapIndex(m_Pos);
-	//int m_TileIndex = GameServer()->Collision()->GetTileIndex(MapIndex);
-	//int m_TileFIndex = GameServer()->Collision()->GetFTileIndex(MapIndex);
 	m_MoveRestrictions = GameServer()->Collision()->GetMoveRestrictions(IsSwitchActiveCb, this, m_Pos, 18.0f, MapIndex);
 	if(Index < 0)
 	{
 		m_LastRefillJumps = false;
 		return;
 	}
-
-	GameServer()->m_pController->HandleCharacterTiles(this, Index);
 
 	// stopper
 	if(m_Core.m_Vel.y > 0 && (m_MoveRestrictions & CANTMOVE_DOWN))
@@ -1275,30 +1268,31 @@ void CCharacter::HandleTiles(int Index)
 	int IsSwitch = GameServer()->Collision()->IsSwitch(MapIndex);
 
 	// handle switch tiles
-	if(IsSwitch == TILE_SWITCHOPEN && Switch)
-	{
-		Switch->m_Status = true;
-		Switch->m_EndTick = 0;
-		Switch->m_Type = TILE_SWITCHOPEN;
-	}
-	else if(IsSwitch == TILE_SWITCHTIMEDOPEN && Switch)
-	{
-		Switch->m_Status = true;
-		Switch->m_EndTick = Server()->Tick() + 1 + GameServer()->Collision()->GetSwitchDelay(MapIndex) * Server()->TickSpeed();
-		Switch->m_Type = TILE_SWITCHTIMEDOPEN;
-	}
-	else if(IsSwitch == TILE_SWITCHTIMEDCLOSE && Switch)
-	{
-		Switch->m_Status = false;
-		Switch->m_EndTick = Server()->Tick() + 1 + GameServer()->Collision()->GetSwitchDelay(MapIndex) * Server()->TickSpeed();
-		Switch->m_Type = TILE_SWITCHTIMEDCLOSE;
-	}
-	else if(IsSwitch == TILE_SWITCHCLOSE && Switch)
-	{
-		Switch->m_Status = false;
-		Switch->m_EndTick = 0;
-		Switch->m_Type = TILE_SWITCHCLOSE;
-	}
+	if(Switch)
+		if(IsSwitch == TILE_SWITCHOPEN)
+		{
+			Switch->m_Status = true;
+			Switch->m_EndTick = 0;
+			Switch->m_Type = TILE_SWITCHOPEN;
+		}
+		else if(IsSwitch == TILE_SWITCHTIMEDOPEN)
+		{
+			Switch->m_Status = true;
+			Switch->m_EndTick = Server()->Tick() + 1 + GameServer()->Collision()->GetSwitchDelay(MapIndex) * Server()->TickSpeed();
+			Switch->m_Type = TILE_SWITCHTIMEDOPEN;
+		}
+		else if(IsSwitch == TILE_SWITCHTIMEDCLOSE)
+		{
+			Switch->m_Status = false;
+			Switch->m_EndTick = Server()->Tick() + 1 + GameServer()->Collision()->GetSwitchDelay(MapIndex) * Server()->TickSpeed();
+			Switch->m_Type = TILE_SWITCHTIMEDCLOSE;
+		}
+		else if(IsSwitch == TILE_SWITCHCLOSE)
+		{
+			Switch->m_Status = false;
+			Switch->m_EndTick = 0;
+			Switch->m_Type = TILE_SWITCHCLOSE;
+		}
 
 	int z = GameServer()->Collision()->IsTeleport(MapIndex);
 	if(z && (*m_pTeleOuts)[z - 1].size())

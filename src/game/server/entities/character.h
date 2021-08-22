@@ -182,6 +182,7 @@ public:
 	vec2 m_Intersection;
 	bool m_LastRefillJumps;
 
+	int m_RespawnTick;
 	int m_SpawnTick;
 	int m_WeaponChangeTick;
 

@@ -232,6 +232,7 @@ public:
 	int ProcessSpamProtection(int ClientID);
 	int GetClientVersion(int ClientID) const;
 	bool PlayerExists(int ClientID) const { return m_apPlayers[ClientID]; }
+	CPlayer *GetRandomPlayingPlayer() const;
 
 private:
 	//static void ConMute(IConsole::IResult *pResult, void *pUserData);

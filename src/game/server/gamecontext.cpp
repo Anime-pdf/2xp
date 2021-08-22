@@ -47,6 +47,7 @@ void CGameContext::Construct(int Resetting)
 	for(auto &pPlayer : m_apPlayers)
 		pPlayer = 0;
 
+	m_pVoteManager = 0;
 	m_pController = 0;
 
 	if(Resetting == NO_RESET)
@@ -73,7 +74,7 @@ CGameContext::~CGameContext()
 {
 	for(auto &pPlayer : m_apPlayers)
 		delete pPlayer;
-	if(!m_Resetting)
+	if(!m_Resetting && m_pVoteManager)
 		delete m_pVoteManager;
 }
 
@@ -129,7 +130,7 @@ void CGameContext::FillAntibot(CAntibotRoundData *pData)
 		}
 		pChar->m_Alive = false;
 		pChar->m_Pause = false;
-		pChar->m_Team = -1;
+		pChar->m_Team = TEAM_SPECTATORS;
 
 		pChar->m_Pos = vec2(-1, -1);
 		pChar->m_Vel = vec2(0, 0);
@@ -143,7 +144,7 @@ void CGameContext::FillAntibot(CAntibotRoundData *pData)
 			str_copy(pChar->m_aName, Server()->ClientName(i), sizeof(pChar->m_aName));
 			CCharacter *pGameChar = GetCharacter(i);
 			pChar->m_Alive = (bool)pGameChar;
-			pChar->m_Team = m_apPlayers[i]->GetTeam();
+			pChar->m_Team = m_apPlayers[i]->Spectator() ? TEAM_SPECTATORS : 0;
 			if(pGameChar)
 			{
 				pGameChar->FillAntibot(pChar);
@@ -372,19 +373,9 @@ void CGameContext::SendChat(int ChatterClientID, int Team, const char *pText, in
 		// send to the clients
 		for(int i = 0; i < MAX_CLIENTS; i++)
 		{
-			if(m_apPlayers[i] != 0)
+			if(m_apPlayers[i])
 			{
-				if(Team == CHAT_SPEC)
-				{
-					if(m_apPlayers[i]->GetTeam() == CHAT_SPEC)
-					{
-						Server()->SendPackMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_NORECORD, i);
-					}
-				}
-				else
-				{
-					Server()->SendPackMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_NORECORD, i);
-				}
+				Server()->SendPackMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_NORECORD, i);
 			}
 		}
 	}
@@ -765,7 +756,7 @@ void CGameContext::OnClientEnter(int ClientID)
 	protocol7::CNetMsg_Sv_ClientInfo NewClientInfoMsg;
 	NewClientInfoMsg.m_ClientID = ClientID;
 	NewClientInfoMsg.m_Local = 0;
-	NewClientInfoMsg.m_Team = pNewPlayer->GetTeam();
+	NewClientInfoMsg.m_Team = pNewPlayer->Spectator() ? TEAM_SPECTATORS : 0;
 	NewClientInfoMsg.m_pName = Server()->ClientName(ClientID);
 	NewClientInfoMsg.m_pClan = Server()->ClientClan(ClientID);
 	NewClientInfoMsg.m_Country = Server()->ClientCountry(ClientID);
@@ -795,7 +786,7 @@ void CGameContext::OnClientEnter(int ClientID)
 			protocol7::CNetMsg_Sv_ClientInfo ClientInfoMsg;
 			ClientInfoMsg.m_ClientID = i;
 			ClientInfoMsg.m_Local = 0;
-			ClientInfoMsg.m_Team = pPlayer->GetTeam();
+			ClientInfoMsg.m_Team = pPlayer->Spectator() ? TEAM_SPECTATORS : 0;
 			ClientInfoMsg.m_pName = Server()->ClientName(i);
 			ClientInfoMsg.m_pClan = Server()->ClientClan(i);
 			ClientInfoMsg.m_Country = Server()->ClientCountry(i);
@@ -827,27 +818,19 @@ bool CGameContext::OnClientDataPersist(int ClientID, void *pData)
 	{
 		return false;
 	}
-	pPersistent->m_IsSpectator = m_apPlayers[ClientID]->GetTeam() == TEAM_SPECTATORS;
+	pPersistent->m_IsSpectator = m_apPlayers[ClientID]->Spectator();
 	return true;
 }
 
 void CGameContext::OnClientConnected(int ClientID, void *pData)
 {
-	// Check which team the player should be on
-	const int StartTeam = m_pController->GetAutoTeam(ClientID);
-
 	if(!m_apPlayers[ClientID])
-		m_apPlayers[ClientID] = new(ClientID) CPlayer(this, ClientID, StartTeam);
+		m_apPlayers[ClientID] = new(ClientID) CPlayer(this, ClientID, IGameController::GAMETEAM_NONE);
 	else
 	{
 		delete m_apPlayers[ClientID];
-		m_apPlayers[ClientID] = new(ClientID) CPlayer(this, ClientID, StartTeam);
-		//	//m_apPlayers[ClientID]->Reset();
-		//	//((CServer*)Server())->m_aClients[ClientID].Reset();
-		//	((CServer*)Server())->m_aClients[ClientID].m_State = 4;
+		m_apPlayers[ClientID] = new(ClientID) CPlayer(this, ClientID, IGameController::GAMETEAM_NONE);
 	}
-	//players[client_id].init(client_id);
-	//players[client_id].client_id = client_id;
 
 #ifdef CONF_DEBUG
 	if(g_Config.m_DbgDummies)
@@ -1238,20 +1221,16 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 				return;
 
 			pPlayer->m_Vote = pMsg->m_Vote;
-			pPlayer->m_VotePos = VoteManager()->GetVotePos();
 			VoteManager()->SetUpdating(true);
 		}
 		else if(MsgID == NETMSGTYPE_CL_SETTEAM && !m_World.m_Paused)
 		{
 			CNetMsg_Cl_SetTeam *pMsg = (CNetMsg_Cl_SetTeam *)pRawMsg;
 
-			if(pPlayer->GetTeam() == pMsg->m_Team)
-				return;
-
 			// Switch team on given client and kill/respawn him
 			if(m_pController->CanJoinTeam(pMsg->m_Team, ClientID))
 			{
-				if(pPlayer->GetTeam() == TEAM_SPECTATORS || pMsg->m_Team == TEAM_SPECTATORS)
+				if(pPlayer->Spectator() || pMsg->m_Team == TEAM_SPECTATORS)
 					VoteManager()->SetUpdating(true);
 				m_pController->DoTeamChange(pPlayer, pMsg->m_Team);
 			}
@@ -1297,11 +1276,11 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 
 			pMsg->m_SpectatorID = clamp(pMsg->m_SpectatorID, (int)SPEC_FOLLOW, MAX_CLIENTS - 1);
 
-			if(pMsg->m_SpectatorID >= 0)
+			if(pMsg->m_SpectatorID > SPEC_FREEVIEW)
 				if(!Server()->ReverseTranslate(pMsg->m_SpectatorID, ClientID))
 					return;
 
-			if(pMsg->m_SpectatorID >= 0 && (!m_apPlayers[pMsg->m_SpectatorID] || m_apPlayers[pMsg->m_SpectatorID]->GetTeam() == TEAM_SPECTATORS))
+			if(pMsg->m_SpectatorID > SPEC_FREEVIEW && (!m_apPlayers[pMsg->m_SpectatorID] || m_apPlayers[pMsg->m_SpectatorID]->Spectator()))
 				SendChatTarget(ClientID, "Invalid spectator id used");
 			else
 				pPlayer->m_SpectatorID = pMsg->m_SpectatorID;
@@ -1366,7 +1345,7 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 				Info.m_pClan = pMsg->m_pClan;
 				Info.m_Local = 0;
 				Info.m_Silent = true;
-				Info.m_Team = pPlayer->GetTeam();
+				Info.m_Team = pPlayer->Spectator() ? TEAM_SPECTATORS : 0;
 
 				for(int p = 0; p < 6; p++)
 				{
@@ -1445,10 +1424,11 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 		}
 		else if(MsgID == NETMSGTYPE_CL_KILL && !m_World.m_Paused)
 		{
-			if(!(CCharacter *)pPlayer)
+			CCharacter *pCharacter = (CCharacter *)pPlayer;
+			if(!pCharacter)
 				return;
 
-			// pPlayer->KillCharacter(WEAPON_SELF); // TODO: CHARACTER:
+			pCharacter->Die(ClientID, WEAPON_GAME);
 			pPlayer->Respawn();
 		}
 	}
@@ -2070,6 +2050,8 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 		}
 	}
 
+	m_pController->OnEntityEnd();
+
 	//game.world.insert_entity(game.Controller);
 
 #ifdef CONF_DEBUG
@@ -2320,12 +2302,12 @@ void CGameContext::OnPostSnap()
 
 bool CGameContext::IsClientReady(int ClientID) const
 {
-	return m_apPlayers[ClientID] && m_apPlayers[ClientID]->m_IsReady ? true : false;
+	return m_apPlayers[ClientID] && m_apPlayers[ClientID]->m_IsReady;
 }
 
 bool CGameContext::IsClientPlayer(int ClientID) const
 {
-	return m_apPlayers[ClientID] && m_apPlayers[ClientID]->GetTeam() != TEAM_SPECTATORS;
+	return m_apPlayers[ClientID] && m_apPlayers[ClientID]->Spectator();
 }
 
 CUuid CGameContext::GameUuid() const { return m_GameUuid; }
@@ -2748,4 +2730,18 @@ CPlayer *CGameContext::GetPlayer(int ClientID)
 		return 0;
 
 	return m_apPlayers[ClientID];
+}
+
+CPlayer *CGameContext::GetRandomPlayingPlayer() const
+{
+	std::vector<int> PlayerIDs(MAX_CLIENTS);
+	for(auto pPlayer : m_apPlayers)
+	{
+		if(pPlayer && pPlayer->IsPlaying())
+		{
+			PlayerIDs.push_back(pPlayer->GetCID());
+		}
+	}
+
+	return m_apPlayers[PlayerIDs[frandom() * PlayerIDs.size()]];
 }

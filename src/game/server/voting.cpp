@@ -68,20 +68,18 @@ void CVoteManager::CallVote(int ClientID, const char *pDesc, const char *pCmd, c
 	m_VoteCreator = ClientID;
 	StartVote(pDesc, pCmd, pReason, pSixupDesc);
 	pPlayer->m_Vote = 1;
-	pPlayer->m_VotePos = m_VotePos = 1;
 }
 
 void CVoteManager::StartVote(const char *pDesc, const char *pCommand, const char *pReason, const char *pSixupDesc)
 {
 	// reset votes
-	m_VoteState &= 0;
+	m_VoteState = 0;
 	m_VoteEnforcer = -1;
 	for(int i = 0; i < MAX_CLIENTS; i++)
 	{
 		if(CPlayer *pPlayer = GameServer()->GetPlayer(i))
 		{
 			pPlayer->m_Vote = 0;
-			pPlayer->m_VotePos = 0;
 		}
 	}
 
@@ -263,7 +261,7 @@ void CVoteManager::Tick()
 				if(!GameServer()->GetPlayer(i) || aVoteChecked[i])
 					continue;
 
-				if((IsKickVote() || IsSpecVote()) && GameServer()->GetPlayer(i)->GetTeam() == TEAM_SPECTATORS)
+				if((IsKickVote() || IsSpecVote()) && GameServer()->GetPlayer(i)->Spectator())
 					continue;
 
 				if(GameServer()->GetPlayer(i)->m_Afk && i != m_VoteCreator)
@@ -278,7 +276,6 @@ void CVoteManager::Tick()
 					continue;
 
 				int ActVote = GameServer()->GetPlayer(i)->m_Vote;
-				int ActVotePos = GameServer()->GetPlayer(i)->m_VotePos;
 
 				// only allow IPs to vote once, but keep veto ability
 				// check for more players with the same ip (only use the vote of the one who voted first)
@@ -286,13 +283,6 @@ void CVoteManager::Tick()
 				{
 					if(!GameServer()->GetPlayer(i) || aVoteChecked[j] || str_comp(aaBuf[j], aaBuf[i]) != 0)
 						continue;
-
-					// count the latest vote by this ip
-					if(ActVotePos < GameServer()->GetPlayer(i)->m_VotePos)
-					{
-						ActVote = GameServer()->GetPlayer(i)->m_Vote;
-						ActVotePos = GameServer()->GetPlayer(i)->m_VotePos;
-					}
 
 					aVoteChecked[j] = true;
 				}
@@ -522,7 +512,7 @@ void CVoteManager::TryCallVote(int ClientID, CNetMsg_Cl_CallVote *pMsg)
 
 		int SpectateID = str_toint(pMsg->m_Value);
 
-		if(SpectateID < 0 || SpectateID >= MAX_CLIENTS || !pPlayer || pPlayer->GetTeam() == TEAM_SPECTATORS)
+		if(SpectateID < 0 || SpectateID >= MAX_CLIENTS || !pPlayer || pPlayer->Spectator())
 		{
 			GameServer()->SendChatTarget(ClientID, "Invalid client id to move");
 			return;
@@ -737,7 +727,7 @@ void CVoteManager::ForceVote(int ClientID, const char *pType, const char *pValue
 	else if(str_comp_nocase(pType, "spectate") == 0)
 	{
 		int SpectateID = str_toint(pValue);
-		if(SpectateID < 0 || SpectateID >= MAX_CLIENTS || !GameServer()->GetPlayer(SpectateID) || GameServer()->GetPlayer(SpectateID)->GetTeam() == TEAM_SPECTATORS)
+		if(SpectateID < 0 || SpectateID >= MAX_CLIENTS || !GameServer()->GetPlayer(SpectateID) || GameServer()->GetPlayer(SpectateID)->Spectator())
 		{
 			GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", "Invalid client id to move");
 			return;
