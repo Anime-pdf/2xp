@@ -8,6 +8,10 @@
 #include <engine/console.h>
 #include <engine/storage.h>
 
+#include "spdlog/spdlog.h"
+
+#define FMT "[Console] "
+
 class CConsole : public IConsole
 {
 	class CCommand : public CCommandInfo
@@ -124,7 +128,8 @@ class CConsole : public IConsole
 
 		virtual void RemoveArgument(unsigned Index)
 		{
-			dbg_assert(Index < m_NumArgs, "invalid argument index");
+			if(Index >= m_NumArgs)
+				spdlog::error(FMT "Invalid argument index: {}", Index);
 			for(unsigned i = Index; i < m_NumArgs - 1; i++)
 				m_apArgs[i] = m_apArgs[i + 1];
 

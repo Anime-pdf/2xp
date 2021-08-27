@@ -49,7 +49,7 @@ bool IGameController::CanSpawn(int Team, vec2 *pOutPos)
 	{
 		if(!m_aSpawnPoints.empty())
 		{
-			*pOutPos = m_aSpawnPoints[m_aSpawnPoints.size() * frandom()];
+			*pOutPos = m_aSpawnPoints[(int)(m_aSpawnPoints.size() * frandom())];
 			return true;
 		}
 	}
@@ -244,7 +244,7 @@ void IGameController::ChangeMap(const char *pToMap)
 void IGameController::OnReset()
 {
 	for(auto &pPlayer : GameServer()->m_apPlayers)
-		if(pPlayer)
+		if(pPlayer && !pPlayer->Spectator())
 			pPlayer->Respawn();
 }
 
@@ -304,6 +304,8 @@ void IGameController::DoWarmup(int Seconds)
 		m_Warmup = 0;
 	else
 		m_Warmup = Seconds * Server()->TickSpeed();
+
+	OnReset();
 }
 
 bool IGameController::IsForceBalanced()
@@ -415,13 +417,14 @@ void IGameController::DoTeamChange(CPlayer *pPlayer, int Team)
 	{
 		switch(m_GameState)
 		{
+		case GAMESTATE_NONE:
 		case GAMESTATE_START:
 			pPlayer->SetTeam(GAMETEAM_HUMAN);
 			break;
 		case GAMESTATE_RUNNING:
 			pPlayer->SetTeam(GAMETEAM_ZOMBIE); // TODO: CONFIG: set zombie or force to spectators
 			break;
-		case GAMESTATE_NONE: // don't do anything, game is frozen
+		 // don't do anything, game is frozen
 		case GAMESTATE_END:
 		default:
 			break;

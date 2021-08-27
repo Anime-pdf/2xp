@@ -7,6 +7,10 @@
 #include <game/generated/protocol.h>
 #include <game/generated/protocolglue.h>
 
+#include "spdlog/spdlog.h"
+
+#define FMT "[Snapshot] "
+
 // CSnapshot
 
 CSnapshotItem *CSnapshot::GetItem(int Index) const
@@ -76,14 +80,14 @@ unsigned CSnapshot::Crc()
 
 void CSnapshot::DebugDump()
 {
-	dbg_msg("snapshot", "data_size=%d num_items=%d", m_DataSize, m_NumItems);
+	spdlog::info(FMT "DataSize: {}, NumItems: {}", m_DataSize, m_NumItems);
 	for(int i = 0; i < m_NumItems; i++)
 	{
 		CSnapshotItem *pItem = GetItem(i);
 		int Size = GetItemSize(i);
-		dbg_msg("snapshot", "\ttype=%d id=%d", pItem->Type(), pItem->ID());
+		spdlog::info(FMT "\tType: {}, ID: {}", pItem->Type(), pItem->ID());
 		for(int b = 0; b < Size / 4; b++)
-			dbg_msg("snapshot", "\t\t%3d %12d\t%08x", b, pItem->Data()[b], pItem->Data()[b]);
+			spdlog::info(FMT "\t\t{} {}\t{}", b, pItem->Data()[b], pItem->Data()[b]);
 	}
 }
 
@@ -284,25 +288,6 @@ int CSnapshotDelta::CreateDelta(CSnapshot *pFrom, CSnapshot *pTo, void *pDstData
 		}
 	}
 
-	if(0)
-	{
-		dbg_msg("snapshot", "%d %d %d",
-			pDelta->m_NumDeletedItems,
-			pDelta->m_NumUpdateItems,
-			pDelta->m_NumTempItems);
-	}
-
-	/*
-	// TODO: pack temp stuff
-
-	// finish
-	//mem_copy(pDelta->offsets, deleted, pDelta->num_deleted_items*sizeof(int));
-	//mem_copy(&(pDelta->offsets[pDelta->num_deleted_items]), update, pDelta->num_update_items*sizeof(int));
-	//mem_copy(&(pDelta->offsets[pDelta->num_deleted_items+pDelta->num_update_items]), temp, pDelta->num_temp_items*sizeof(int));
-	//mem_copy(pDelta->data_start(), data, data_size);
-	//pDelta->data_size = data_size;
-	* */
-
 	if(!pDelta->m_NumDeletedItems && !pDelta->m_NumUpdateItems && !pDelta->m_NumTempItems)
 		return 0;
 
@@ -341,7 +326,6 @@ int CSnapshotDelta::UnpackDelta(CSnapshot *pFrom, CSnapshot *pTo, void *pSrcData
 	// copy all non deleted stuff
 	for(int i = 0; i < pFrom->NumItems(); i++)
 	{
-		// dbg_assert(0, "fail!");
 		pFromItem = pFrom->GetItem(i);
 		ItemSize = pFrom->GetItemSize(i);
 		Keep = 1;
@@ -567,7 +551,6 @@ int *CSnapshotBuilder::GetItemData(int Key)
 
 int CSnapshotBuilder::Finish(void *pSnapData)
 {
-	//dbg_msg("snap", "---------------------------");
 	// flattern and make the snapshot
 	CSnapshot *pSnap = (CSnapshot *)pSnapData;
 	int OffsetSize = sizeof(int) * m_NumItems;
@@ -585,7 +568,12 @@ static int GetTypeFromIndex(int Index)
 
 void CSnapshotBuilder::AddExtendedItemType(int Index)
 {
-	dbg_assert(0 <= Index && Index < m_NumExtendedItemTypes, "index out of range");
+	if(0 > Index || Index >= m_NumExtendedItemTypes)
+	{
+		spdlog::error(FMT "Index out of range");
+		return;
+	}
+		
 	int TypeID = m_aExtendedItemTypes[Index];
 	CUuid Uuid = g_UuidManager.GetUuid(TypeID);
 	int *pUuidItem = (int *)NewItem(0, GetTypeFromIndex(Index), sizeof(Uuid)); // NETOBJTYPE_EX
@@ -611,7 +599,11 @@ int CSnapshotBuilder::GetExtendedItemTypeIndex(int TypeID)
 			return i;
 		}
 	}
-	dbg_assert(m_NumExtendedItemTypes < MAX_EXTENDED_ITEM_TYPES, "too many extended item types");
+	if(m_NumExtendedItemTypes >= MAX_EXTENDED_ITEM_TYPES)
+	{
+		spdlog::error(FMT "Too many extended item types");
+		return m_NumExtendedItemTypes - 1;
+	}
 	int Index = m_NumExtendedItemTypes;
 	m_aExtendedItemTypes[Index] = TypeID;
 	m_NumExtendedItemTypes++;
@@ -623,8 +615,7 @@ void *CSnapshotBuilder::NewItem(int Type, int ID, int Size)
 	if(m_DataSize + sizeof(CSnapshotItem) + Size >= CSnapshot::MAX_SIZE ||
 		m_NumItems + 1 >= MAX_ITEMS)
 	{
-		dbg_assert(m_DataSize < CSnapshot::MAX_SIZE, "too much data");
-		dbg_assert(m_NumItems < MAX_ITEMS, "too many items");
+		spdlog::error(FMT "Too much data or too many items");
 		return 0;
 	}
 

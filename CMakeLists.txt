@@ -314,6 +314,7 @@ function(is_bundled VARIABLE PATH)
 endfunction()
 
 set(Boost_INCLUDES_DIRS)
+set(spdlog_INCLUDE_DIRS)
 if(NOT CMAKE_CROSSCOMPILING)
   # Check for PkgConfig once so all the other `find_package` calls can do it
   # quietly.
@@ -344,13 +345,20 @@ endif()
 
 if(TARGET_OS AND TARGET_OS STREQUAL "linux")
   find_package(Boost 1.36.0)
+  find_package(spdlog)
   if(NOT(Boost_FOUND))
-    message(FATAL_ERROR, "Boost need install.")
+    message(FATAL_ERROR, "Boost (libboost-dev) needs to be installed")
+  endif()
+  if(NOT(spdlog_FOUND))
+    message(FATAL_ERROR, "spdlog (libspdlog-dev) needs to be installed")
   endif()
 endif()
 
 if(NOT(Boost_INCLUDES_DIRS))
   set(Boost_INCLUDE_DIRS "libs/boost/include")
+endif()
+if(NOT(spdlog_INCLUDES_DIRS))
+  set(spdlog_INCLUDE_DIRS "libs/spdlog/include")
 endif()
 
 message(STATUS "******** ${SERVER_EXECUTABLE} ********")
@@ -610,7 +618,7 @@ set_src(BASE GLOB_RECURSE src/base
   hash_libtomcrypt.c
   hash_openssl.c
   math.h
-  system.c
+  system.cpp
   system.h
   tl/algorithm.h
   tl/allocator.h
@@ -1106,6 +1114,7 @@ foreach(target ${TARGETS_OWN})
   target_compile_definitions(${target} PRIVATE CONF_SQL)
   target_include_directories(${target} PRIVATE ${Boost_INCLUDE_DIRS})
   target_include_directories(${target} PRIVATE ${MYSQL_INCLUDE_DIRS})
+  target_include_directories(${target} PRIVATE ${spdlog_INCLUDE_DIRS})
   if(VERSION)
     target_compile_definitions(${target} PRIVATE GAME_RELEASE_VERSION="${VERSION}")
   endif()

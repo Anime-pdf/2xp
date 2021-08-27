@@ -3,6 +3,10 @@
 #include "network.h"
 #include <base/system.h>
 
+#include "spdlog/spdlog.h"
+
+#define FMT "[Network Client] "
+
 bool CNetClient::Open(NETADDR BindAddr, int Flags)
 {
 	// open socket
@@ -30,7 +34,8 @@ int CNetClient::Close()
 
 int CNetClient::Disconnect(const char *pReason)
 {
-	//dbg_msg("netclient", "disconnected. reason=\"%s\"", pReason);
+
+	spdlog::info(FMT "Disconnected: \"{}\"", pReason);
 	m_Connection.Disconnect(pReason);
 	return 0;
 }
@@ -103,7 +108,7 @@ int CNetClient::Send(CNetChunk *pChunk)
 {
 	if(pChunk->m_DataSize >= NET_MAX_PAYLOAD)
 	{
-		dbg_msg("netclient", "chunk payload too big. %d. dropping chunk", pChunk->m_DataSize);
+		spdlog::info(FMT "Chunk payload too big: {}. Dropping...", pChunk->m_DataSize);
 		return -1;
 	}
 
@@ -116,7 +121,11 @@ int CNetClient::Send(CNetChunk *pChunk)
 	else
 	{
 		int Flags = 0;
-		dbg_assert(pChunk->m_ClientID == 0, "errornous client id");
+		if(pChunk->m_ClientID != 0)
+		{
+			spdlog::error(FMT "Errornous client ID: {}");
+			return -1;
+		}
 
 		if(pChunk->m_Flags & NETSENDFLAG_VITAL)
 			Flags = NET_CHUNKFLAG_VITAL;

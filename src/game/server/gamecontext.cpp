@@ -1,6 +1,8 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 
+#include "spdlog/spdlog.h"
+
 #include <string.h>
 #include <base/math.h>
 #include <base/tl/sorted_array.h>
@@ -32,6 +34,10 @@
 #include "voting.h"
 
 #include "gamecontext.h"
+
+#include "spdlog/spdlog.h"
+
+#define FMT "[Game Server] "
 
 enum
 {
@@ -109,7 +115,7 @@ class CCharacter *CGameContext::GetCharacter(int ClientID)
 {
 	if(ClientID < 0 || ClientID >= MAX_CLIENTS || !m_apPlayers[ClientID])
 		return 0;
-	return (CCharacter*)m_apPlayers[ClientID];
+	return m_apPlayers[ClientID]->Character();
 }
 
 void CGameContext::FillAntibot(CAntibotRoundData *pData)
@@ -492,13 +498,13 @@ void CGameContext::SendTuningParams(int ClientID, int Zone)
 	}
 
 	CPlayer *pPlayer = m_apPlayers[ClientID];
-	CCharacter *pCharacter = (CCharacter *)pPlayer;
+	CCharacter *pCharacter = GetCharacter(ClientID);
 
 	for(unsigned i = 0; i < Last; i++)
 	{
 		if(CPlayer *pPlayer = m_apPlayers[ClientID])
 		{
-			if(CCharacter *pCharacter = (CCharacter *)pPlayer)
+			if(CCharacter *pCharacter = pPlayer->Character())
 			{
 				int NeededFakeTune = pCharacter->NeededFaketuning();
 				if((i == 3) // ground jump impulse
@@ -554,7 +560,9 @@ void CGameContext::OnTick()
 		int Error = aio_error(m_pTeeHistorianFile);
 		if(Error)
 		{
-			dbg_msg("teehistorian", "error writing to file, err=%d", Error);
+			spdlog::critical("teehistorian", "error writing to file, err=%d", Error);
+
+
 			Server()->SetErrorShutdown("teehistorian io error");
 		}
 
@@ -899,7 +907,8 @@ bool CGameContext::OnClientDDNetVersionKnown(int ClientID)
 	IServer::CClientInfo Info;
 	Server()->GetClientInfo(ClientID, &Info);
 	int ClientVersion = Info.m_DDNetVersion;
-	dbg_msg("ddnet", "cid=%d version=%d", ClientID, ClientVersion);
+
+	spdlog::info(FMT "Client ID: {}, version: {}", ClientID, ClientVersion);
 
 	if(m_TeeHistorianActive)
 	{
@@ -1029,7 +1038,7 @@ void *CGameContext::PreProcessMsg(int *MsgID, CUnpacker *pUnpacker, int ClientID
 
 			str_format(s_aRawMsg + sizeof(*pMsg), sizeof(s_aRawMsg) - sizeof(*pMsg), "/%s %s", pMsg7->m_Name, pMsg7->m_Arguments);
 			pMsg->m_pMessage = s_aRawMsg + sizeof(*pMsg);
-			dbg_msg("debug", "line='%s'", s_aRawMsg + sizeof(*pMsg));
+			spdlog::debug(FMT "Line: {}", s_aRawMsg + sizeof(*pMsg));
 			pMsg->m_Team = 0;
 
 			*MsgID = NETMSGTYPE_CL_SAY;
@@ -1384,7 +1393,7 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 			CNetMsg_Cl_Emoticon *pMsg = (CNetMsg_Cl_Emoticon *)pRawMsg;
 
 			SendEmoticon(ClientID, pMsg->m_Emoticon);
-			CCharacter *pChr = (CCharacter *)pPlayer;
+			CCharacter *pChr = pPlayer->Character();
 			if(pChr && g_Config.m_SvEmotionalTees)
 			{
 				int EmoteType = EMOTE_NORMAL;
@@ -1424,12 +1433,7 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 		}
 		else if(MsgID == NETMSGTYPE_CL_KILL && !m_World.m_Paused)
 		{
-			CCharacter *pCharacter = (CCharacter *)pPlayer;
-			if(!pCharacter)
-				return;
-
-			pCharacter->Die(ClientID, WEAPON_GAME);
-			pPlayer->Respawn();
+			pPlayer->TryRespawn();
 		}
 	}
 	if(MsgID == NETMSGTYPE_CL_STARTINFO)
@@ -1949,13 +1953,13 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 		IOHANDLE File = Storage()->OpenFile(aFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE);
 		if(!File)
 		{
-			dbg_msg("teehistorian", "failed to open '%s'", aFilename);
+			spdlog::error("[Teehistorian] Failed to open {}", aFilename);
 			Server()->SetErrorShutdown("teehistorian open error");
 			return;
 		}
 		else
 		{
-			dbg_msg("teehistorian", "recording to '%s'", aFilename);
+			spdlog::info("[Teehistorian] Recording to {}", aFilename);
 		}
 		m_pTeeHistorianFile = aio_new(File);
 
@@ -1998,10 +2002,6 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 			}
 		}
 	}
-	// setup core world
-	//for(int i = 0; i < MAX_CLIENTS; i++)
-	//	game.players[i].core.world = &game.world.core;
-
 	// create all entities from the game layer
 	CMapItemLayerTilemap *pTileMap = m_Layers.GameLayer();
 	CTile *pTiles = (CTile *)Kernel()->RequestInterface<IMap>()->GetData(pTileMap->m_Data);
@@ -2196,7 +2196,7 @@ void CGameContext::LoadMapSettings(char *pNewMapName, int MapNameSize)
 		Reader.UnloadData(i);
 	}
 
-	dbg_msg("mapchange", "imported settings");
+	spdlog::info(FMT "Map settings was succesfully imported");
 	free(pSettings);
 	Reader.Close();
 	Writer.OpenFile(Storage(), aTemp);
@@ -2218,7 +2218,7 @@ void CGameContext::OnShutdown()
 		int Error = aio_error(m_pTeeHistorianFile);
 		if(Error)
 		{
-			dbg_msg("teehistorian", "error closing file, err=%d", Error);
+			spdlog::error("[Teehistorian] Error closing file: {}", Error);
 			Server()->SetErrorShutdown("teehistorian close error");
 		}
 		aio_free(m_pTeeHistorianFile);
@@ -2737,7 +2737,7 @@ CPlayer *CGameContext::GetRandomPlayingPlayer() const
 	std::vector<int> PlayerIDs(MAX_CLIENTS);
 	for(auto pPlayer : m_apPlayers)
 	{
-		if(pPlayer && pPlayer->IsPlaying())
+		if(pPlayer && !pPlayer->Spectator())
 		{
 			PlayerIDs.push_back(pPlayer->GetCID());
 		}

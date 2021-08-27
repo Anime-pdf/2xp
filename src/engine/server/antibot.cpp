@@ -1,9 +1,13 @@
+#include "spdlog/spdlog.h"
+
 #include "antibot.h"
 #include <antibot/antibot_interface.h>
 
 #include <engine/console.h>
 #include <engine/kernel.h>
 #include <engine/server.h>
+
+#define FMT "[Antibot] "
 
 #ifdef CONF_ANTIBOT
 CAntibot::CAntibot() :
@@ -48,8 +52,10 @@ void CAntibot::Init()
 {
 	m_pServer = Kernel()->RequestInterface<IServer>();
 	m_pConsole = Kernel()->RequestInterface<IConsole>();
-	dbg_assert(m_pServer && m_pConsole, "antibot requires server and console");
-	dbg_assert(AntibotAbiVersion() == ANTIBOT_ABI_VERSION, "antibot abi version mismatch");
+	if(!m_pServer || !m_pConsole)
+		spdlog::error(FMT "Antibot requires server and console");
+	if(AntibotAbiVersion() == ANTIBOT_ABI_VERSION)
+		spdlog::error(FMT "Antibot ABI version mismatch");
 
 	mem_zero(&m_Data, sizeof(m_Data));
 	CAntibotVersion Version = ANTIBOT_VERSION;
@@ -178,7 +184,8 @@ void CAntibot::Init()
 {
 	m_pServer = Kernel()->RequestInterface<IServer>();
 	m_pConsole = Kernel()->RequestInterface<IConsole>();
-	dbg_assert(m_pServer && m_pConsole, "antibot requires server and console");
+	if(m_pServer || m_pConsole)
+		spdlog::error(FMT "Antibot requires server and console");
 }
 void CAntibot::RoundStart(IGameServer *pGameServer)
 {

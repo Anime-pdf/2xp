@@ -1,5 +1,9 @@
 #include "prng.h"
 
+#include "spdlog/spdlog.h"
+
+#define FMT "[Prng] "
+
 // From https://en.wikipedia.org/w/index.php?title=Permuted_congruential_generator&oldid=901497400#Example_code.
 //
 // > The generator recommended for most users is PCG-XSH-RR with 64-bit state
@@ -20,7 +24,7 @@ const char *CPrng::Description() const
 	}
 	return m_aDescription;
 }
-
+#undef RotateRight32
 static unsigned int RotateRight32(unsigned int x, int Shift)
 {
 	return (x >> Shift) | (x << (-Shift & 31));
@@ -40,7 +44,11 @@ void CPrng::Seed(uint64 aSeed[2])
 
 unsigned int CPrng::RandomBits()
 {
-	dbg_assert(m_Seeded, "prng needs to be seeded before it can generate random numbers");
+	if(!m_Seeded)
+	{
+		spdlog::error(FMT "Prng needs to be seeded before it can generate random numbers");
+		return 0;
+	}
 
 	uint64 x = m_State;
 	unsigned int Count = x >> 59;

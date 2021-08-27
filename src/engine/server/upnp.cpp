@@ -8,6 +8,10 @@
 #include <miniupnpc/upnpcommands.h>
 #include <miniupnpc/upnperrors.h>
 
+#include "spdlog/spdlog.h"
+
+#define FMT "[UPnP] "
+
 void CUPnP::Open(NETADDR Address)
 {
 	if(g_Config.m_SvUseUPnP)
@@ -24,25 +28,25 @@ void CUPnP::Open(NETADDR Address)
 		m_UPnPDevice = upnpDiscover(2000, NULL, NULL, 0, 0, 2, &Error);
 
 		int Status = UPNP_GetValidIGD(m_UPnPDevice, m_UPnPUrls, m_UPnPData, aLanAddr, sizeof(aLanAddr));
-		dbg_msg("upnp", "status=%d, lan_addr=%s", Status, aLanAddr);
+		spdlog::info(FMT "Status: {}. LAN Address: {}", Status, aLanAddr);
 
 		if(Status == 1)
 		{
 			m_Enabled = true;
-			dbg_msg("upnp", "found valid IGD: %s", m_UPnPUrls->controlURL);
+			spdlog::info(FMT "Found valid IGD: {}", m_UPnPUrls->controlURL);
 			str_format(aPort, sizeof(aPort), "%d", m_Addr.port);
 			Error = UPNP_AddPortMapping(m_UPnPUrls->controlURL, m_UPnPData->first.servicetype,
 				aPort, aPort, aLanAddr,
-				"DDNet Server " GAME_RELEASE_VERSION,
+				"2XP Server" GAME_RELEASE_VERSION,
 				"UDP", NULL, "0");
 
 			if(Error)
-				dbg_msg("upnp", "failed to map port, error: %s", strupnperror(Error));
+				spdlog::info(FMT "Failed to map port: {}", strupnperror(Error));
 			else
-				dbg_msg("upnp", "successfully mapped port");
+				spdlog::info(FMT "Successfully mapped port");
 		}
 		else
-			dbg_msg("upnp", "no valid IGD found, disabled");
+			spdlog::info(FMT "No valid IGD found, disabled");
 	}
 }
 
@@ -58,7 +62,7 @@ void CUPnP::Shutdown()
 
 			if(Error != 0)
 			{
-				dbg_msg("upnp", "failed to delete port mapping on shutdown: %s", strupnperror(Error));
+				spdlog::info(FMT "Failed to delete port mapping on shutdown: {}", strupnperror(Error));
 			}
 			FreeUPNPUrls(m_UPnPUrls);
 			freeUPNPDevlist(m_UPnPDevice);

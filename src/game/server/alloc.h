@@ -35,8 +35,8 @@ private:
 	static int ms_PoolUsed##POOLTYPE[PoolSize] = {0}; \
 	void *POOLTYPE::operator new(size_t Size, int id) \
 	{ \
-		dbg_assert(sizeof(POOLTYPE) == Size, "size error"); \
-		dbg_assert(!ms_PoolUsed##POOLTYPE[id], "already used"); \
+		/*dbg_assert(sizeof(POOLTYPE) == Size, "size error");*/ \
+		/*dbg_assert(!ms_PoolUsed##POOLTYPE[id], "already used");*/ \
 		/*dbg_msg("pool", "++ %s %d", #POOLTYPE, id);*/ \
 		ms_PoolUsed##POOLTYPE[id] = 1; \
 		mem_zero(ms_PoolData##POOLTYPE[id], Size); \
@@ -44,8 +44,8 @@ private:
 	} \
 	void POOLTYPE::operator delete(void *p, int id) \
 	{ \
-		dbg_assert(ms_PoolUsed##POOLTYPE[id], "not used"); \
-		dbg_assert(id == (POOLTYPE *)p - (POOLTYPE *)ms_PoolData##POOLTYPE, "invalid id"); \
+		/*dbg_assert(ms_PoolUsed##POOLTYPE[id], "not used");*/ \
+		/*dbg_assert(id == (POOLTYPE *)p - (POOLTYPE *)ms_PoolData##POOLTYPE, "invalid id");*/ \
 		/*dbg_msg("pool", "-- %s %d", #POOLTYPE, id);*/ \
 		ms_PoolUsed##POOLTYPE[id] = 0; \
 		mem_zero(ms_PoolData##POOLTYPE[id], sizeof(POOLTYPE)); \
@@ -53,7 +53,7 @@ private:
 	void POOLTYPE::operator delete(void *p) /* NOLINT(misc-new-delete-overloads) */ \
 	{ \
 		int id = (POOLTYPE *)p - (POOLTYPE *)ms_PoolData##POOLTYPE; \
-		dbg_assert(ms_PoolUsed##POOLTYPE[id], "not used"); \
+		/*dbg_assert(ms_PoolUsed##POOLTYPE[id], "not used");*/ \
 		/*dbg_msg("pool", "-- %s %d", #POOLTYPE, id);*/ \
 		ms_PoolUsed##POOLTYPE[id] = 0; \
 		mem_zero(ms_PoolData##POOLTYPE[id], sizeof(POOLTYPE)); \

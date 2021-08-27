@@ -16,6 +16,10 @@
 
 #include <engine/shared/config.h>
 
+#include "spdlog/spdlog.h"
+
+#define FMT "[Collision] "
+
 vec2 ClampVel(int MoveRestriction, vec2 Vel)
 {
 	if(Vel.x > 0 && (MoveRestriction & CANTMOVE_RIGHT))
@@ -212,7 +216,6 @@ static int GetMoveRestrictionsMask(int Direction)
 	case MR_DIR_DOWN: return CANTMOVE_DOWN;
 	case MR_DIR_LEFT: return CANTMOVE_LEFT;
 	case MR_DIR_UP: return CANTMOVE_UP;
-	default: dbg_assert(false, "invalid dir");
 	}
 	return 0;
 }
@@ -239,7 +242,10 @@ int CCollision::GetMoveRestrictions(CALLBACK_SWITCHACTIVE pfnSwitchActive, void 
 			vec2(0, 1),
 			vec2(-1, 0),
 			vec2(0, -1)};
-	dbg_assert(0.0f <= Distance && Distance <= 32.0f, "invalid distance");
+	if(0.0f > Distance && Distance > 32.0f)
+	{
+		spdlog::error(FMT "Invalid distanse: {}", Distance);
+	}
 	int Restrictions = 0;
 	for(int d = 0; d < NUM_MR_DIRS; d++)
 	{
@@ -961,7 +967,7 @@ int CCollision::Entity(int x, int y, int Layer) const
 		default:
 			str_format(aBuf, sizeof(aBuf), "Unknown");
 		}
-		dbg_msg("collision", "something is VERY wrong with the %s layer please report this at https://github.com/ddnet/ddnet, you will need to post the map as well and any steps that u think may have led to this", aBuf);
+		spdlog::warn(FMT "Something is VERY wrong with the {} layer please report this at https://github.com/ddnet/ddnet, you will need to post the map as well and any steps that u think may have led to this", aBuf);
 		return 0;
 	}
 	switch(Layer)

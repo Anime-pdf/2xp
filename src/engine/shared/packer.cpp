@@ -21,7 +21,7 @@ void CPacker::AddInt(int i)
 	// make sure that we have space enough
 	if(m_pEnd - m_pCurrent < 6)
 	{
-		dbg_break();
+		// ERROR
 		m_Error = 1;
 	}
 	else

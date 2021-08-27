@@ -11,7 +11,7 @@ using std::swap;
 
 inline void tl_assert(bool statement)
 {
-	dbg_assert(statement, "assert!");
+	// what
 }
 
 #endif

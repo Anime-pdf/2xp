@@ -1,5 +1,8 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
+
+#include "spdlog/spdlog.h"
+
 #include <ctype.h>
 #include <math.h>
 #include <stdarg.h>
@@ -68,201 +71,19 @@
 #include <sys/filio.h>
 #endif
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
+//#if defined(__cplusplus)
+//extern "C" {
+//#endif
 
-IOHANDLE io_stdin()
-{
-	return (IOHANDLE)stdin;
-}
+IOHANDLE io_stdin() { return (IOHANDLE)stdin; }
 IOHANDLE io_stdout() { return (IOHANDLE)stdout; }
 IOHANDLE io_stderr() { return (IOHANDLE)stderr; }
-
-typedef struct
-{
-	DBG_LOGGER logger;
-	DBG_LOGGER_FINISH finish;
-	void *user;
-} DBG_LOGGER_DATA;
-
-static DBG_LOGGER_DATA loggers[16];
-static int num_loggers = 0;
 
 static NETSTATS network_stats = {0};
 
 static NETSOCKET invalid_socket = {NETTYPE_INVALID, -1, -1};
 
 #define AF_WEBSOCKET_INET (0xee)
-
-void dbg_assert_imp(const char *filename, int line, int test, const char *msg)
-{
-	if(!test)
-	{
-		dbg_msg("assert", "%s(%d): %s", filename, line, msg);
-		dbg_break_imp();
-	}
-}
-
-void dbg_break_imp(void)
-{
-#ifdef __GNUC__
-	__builtin_trap();
-#else
-	*((volatile unsigned *)0) = 0x0;
-#endif
-}
-
-void dbg_msg(const char *sys, const char *fmt, ...)
-{
-	va_list args;
-	char *msg;
-	int len;
-
-	char str[1024 * 4];
-	int i;
-
-	char timestr[80];
-	str_timestamp_format(timestr, sizeof(timestr), FORMAT_SPACE);
-
-	str_format(str, sizeof(str), "[%s][%s]: ", timestr, sys);
-
-	len = str_length(str);
-	msg = (char *)str + len;
-
-	va_start(args, fmt);
-#if defined(CONF_FAMILY_WINDOWS)
-	_vsnprintf(msg, sizeof(str) - len, fmt, args);
-#else
-	vsnprintf(msg, sizeof(str) - len, fmt, args);
-#endif
-	va_end(args);
-
-	for(i = 0; i < num_loggers; i++)
-		loggers[i].logger(str, loggers[i].user);
-}
-
-#if defined(CONF_FAMILY_WINDOWS)
-static void logger_debugger(const char *line, void *user)
-{
-	(void)user;
-	OutputDebugString(line);
-	OutputDebugString("\n");
-}
-#endif
-
-static void logger_file(const char *line, void *user)
-{
-	ASYNCIO *logfile = (ASYNCIO *)user;
-	aio_lock(logfile);
-	aio_write_unlocked(logfile, line, str_length(line));
-	aio_write_newline_unlocked(logfile);
-	aio_unlock(logfile);
-}
-
-#if defined(CONF_FAMILY_WINDOWS)
-static void logger_stdout_sync(const char *line, void *user)
-{
-	size_t length = str_length(line);
-	wchar_t *wide = malloc(length * sizeof(*wide));
-	const char *p = line;
-	int wlen = 0;
-	HANDLE console;
-
-	(void)user;
-	mem_zero(wide, length * sizeof *wide);
-
-	for(int codepoint = 0; (codepoint = str_utf8_decode(&p)); wlen++)
-	{
-		char u16[4] = {0};
-
-		if(codepoint < 0)
-		{
-			free(wide);
-			return;
-		}
-
-		if(str_utf16le_encode(u16, codepoint) != 2)
-		{
-			free(wide);
-			return;
-		}
-
-		mem_copy(&wide[wlen], u16, 2);
-	}
-
-	console = GetStdHandle(STD_OUTPUT_HANDLE);
-	WriteConsoleW(console, wide, wlen, NULL, NULL);
-	WriteConsoleA(console, "\n", 1, NULL, NULL);
-	free(wide);
-}
-#endif
-
-static void logger_stdout_finish(void *user)
-{
-	ASYNCIO *logfile = (ASYNCIO *)user;
-	aio_wait(logfile);
-	aio_free(logfile);
-}
-
-static void logger_file_finish(void *user)
-{
-	ASYNCIO *logfile = (ASYNCIO *)user;
-	aio_close(logfile);
-	logger_stdout_finish(user);
-}
-
-static void dbg_logger_finish(void)
-{
-	int i;
-	for(i = 0; i < num_loggers; i++)
-	{
-		if(loggers[i].finish)
-		{
-			loggers[i].finish(loggers[i].user);
-		}
-	}
-}
-
-void dbg_logger(DBG_LOGGER logger, DBG_LOGGER_FINISH finish, void *user)
-{
-	DBG_LOGGER_DATA data;
-	if(num_loggers == 0)
-	{
-		atexit(dbg_logger_finish);
-	}
-	data.logger = logger;
-	data.finish = finish;
-	data.user = user;
-	loggers[num_loggers] = data;
-	num_loggers++;
-}
-
-void dbg_logger_stdout(void)
-{
-#if defined(CONF_FAMILY_WINDOWS)
-	dbg_logger(logger_stdout_sync, 0, 0);
-#else
-	dbg_logger(logger_file, logger_stdout_finish, aio_new(io_stdout()));
-#endif
-}
-
-void dbg_logger_debugger(void)
-{
-#if defined(CONF_FAMILY_WINDOWS)
-	dbg_logger(logger_debugger, 0, 0);
-#endif
-}
-
-void dbg_logger_file(const char *filename)
-{
-	IOHANDLE logfile = io_open(filename, IOFLAG_WRITE);
-	if(logfile)
-		dbg_logger(logger_file, logger_file_finish, aio_new(logfile));
-	else
-		dbg_msg("dbg/logger", "failed to open '%s' for logging", filename);
-}
-/* */
 
 void mem_copy(void *dest, const void *source, unsigned size)
 {
@@ -437,7 +258,7 @@ static void aio_handle_free_and_unlock(ASYNCIO *aio) RELEASE(aio->lock)
 
 static void aio_thread(void *user)
 {
-	ASYNCIO *aio = user;
+	ASYNCIO *aio = (ASYNCIO *)user;
 
 	lock_wait(aio->lock);
 	while(1)
@@ -497,7 +318,7 @@ static void aio_thread(void *user)
 
 ASYNCIO *aio_new(IOHANDLE io)
 {
-	ASYNCIO *aio = malloc(sizeof(*aio));
+	ASYNCIO *aio = (ASYNCIO*)malloc(sizeof(*aio));
 	if(!aio)
 	{
 		return 0;
@@ -507,7 +328,7 @@ ASYNCIO *aio_new(IOHANDLE io)
 	sphore_init(&aio->sphore);
 	aio->thread = 0;
 
-	aio->buffer = malloc(ASYNC_BUFSIZE);
+	aio->buffer = (unsigned char*)malloc(ASYNC_BUFSIZE);
 	if(!aio->buffer)
 	{
 		sphore_destroy(&aio->sphore);
@@ -591,7 +412,7 @@ void aio_write_unlocked(ASYNCIO *aio, const void *buffer, unsigned size)
 		unsigned int new_written = buffer_len(aio) + size + 1;
 		unsigned int next_size = next_buffer_size(aio->buffer_size, new_written);
 		unsigned int next_len = 0;
-		unsigned char *next_buffer = malloc(next_size);
+		unsigned char *next_buffer = (unsigned char *)malloc(next_size);
 
 		struct BUFFERS buffers;
 		buffer_ptrs(aio, &buffers);
@@ -682,6 +503,8 @@ void aio_wait(ASYNCIO *aio)
 	thread_wait(thread);
 }
 
+#define FMT "[Thread] "
+
 struct THREAD_RUN
 {
 	void (*threadfunc)(void *);
@@ -696,7 +519,7 @@ static unsigned long __stdcall thread_run(void *user)
 #error not implemented
 #endif
 {
-	struct THREAD_RUN *data = user;
+	struct THREAD_RUN *data = (THREAD_RUN *)user;
 	void (*threadfunc)(void *) = data->threadfunc;
 	void *u = data->u;
 	free(data);
@@ -706,7 +529,7 @@ static unsigned long __stdcall thread_run(void *user)
 
 void *thread_init(void (*threadfunc)(void *), void *u, const char *name)
 {
-	struct THREAD_RUN *data = malloc(sizeof(*data));
+	struct THREAD_RUN *data = (THREAD_RUN *)malloc(sizeof(*data));
 	data->threadfunc = threadfunc;
 	data->u = u;
 #if defined(CONF_FAMILY_UNIX)
@@ -715,7 +538,7 @@ void *thread_init(void (*threadfunc)(void *), void *u, const char *name)
 		int result = pthread_create(&id, NULL, thread_run, data);
 		if(result != 0)
 		{
-			dbg_msg("thread", "creating %s thread failed: %d", name, result);
+			SPDLOG_ERROR(FMT "Creating {} thread failed. ID: {}", name, result);
 			return 0;
 		}
 		return (void *)id;
@@ -732,7 +555,7 @@ void thread_wait(void *thread)
 #if defined(CONF_FAMILY_UNIX)
 	int result = pthread_join((pthread_t)thread, NULL);
 	if(result != 0)
-		dbg_msg("thread", "!! %d", result);
+		SPDLOG_ERROR(FMT "Forcing thread to wait failed. ID: {}", result);
 #elif defined(CONF_FAMILY_WINDOWS)
 	WaitForSingleObject((HANDLE)thread, INFINITE);
 	CloseHandle(thread);
@@ -746,7 +569,7 @@ void thread_yield(void)
 #if defined(CONF_FAMILY_UNIX)
 	int result = sched_yield();
 	if(result != 0)
-		dbg_msg("thread", "yield failed: %d", errno);
+		SPDLOG_ERROR(FMT "Forcing thread to yield failed. ID: {}, {}", result, errno);
 #elif defined(CONF_FAMILY_WINDOWS)
 	Sleep(0);
 #else
@@ -760,7 +583,7 @@ void thread_sleep(int microseconds)
 	int result = usleep(microseconds);
 	/* ignore signal interruption */
 	if(result == -1 && errno != EINTR)
-		dbg_msg("thread", "sleep failed: %d", errno);
+		SPDLOG_ERROR(FMT "Forcing thread to sleep failed. ID: {}, {}", result, errno);
 #elif defined(CONF_FAMILY_WINDOWS)
 	Sleep(microseconds / 1000);
 #else
@@ -773,7 +596,7 @@ void thread_detach(void *thread)
 #if defined(CONF_FAMILY_UNIX)
 	int result = pthread_detach((pthread_t)(thread));
 	if(result != 0)
-		dbg_msg("thread", "detach failed: %d", result);
+		SPDLOG_ERROR(FMT "Forcing thread to detach failed. ID: {}", result);
 #elif defined(CONF_FAMILY_WINDOWS)
 	CloseHandle(thread);
 #else
@@ -797,6 +620,8 @@ typedef CRITICAL_SECTION LOCKINTERNAL;
 #error not implemented on this platform
 #endif
 
+#define FMT "[Lock] "
+
 LOCK lock_create(void)
 {
 	LOCKINTERNAL *lock = (LOCKINTERNAL *)malloc(sizeof(*lock));
@@ -811,7 +636,7 @@ LOCK lock_create(void)
 	result = pthread_mutex_init(lock, 0x0);
 	if(result != 0)
 	{
-		dbg_msg("lock", "init failed: %d", result);
+		SPDLOG_ERROR(FMT "Init failed. ID: {}", result);
 		free(lock);
 		return 0;
 	}
@@ -828,7 +653,7 @@ void lock_destroy(LOCK lock)
 #if defined(CONF_FAMILY_UNIX)
 	int result = pthread_mutex_destroy((LOCKINTERNAL *)lock);
 	if(result != 0)
-		dbg_msg("lock", "destroy failed: %d", result);
+		SPDLOG_ERROR(FMT "Destroy failed. ID: {}", result);
 #elif defined(CONF_FAMILY_WINDOWS)
 	DeleteCriticalSection((LPCRITICAL_SECTION)lock);
 #else
@@ -857,7 +682,7 @@ void lock_wait(LOCK lock)
 #if defined(CONF_FAMILY_UNIX)
 	int result = pthread_mutex_lock((LOCKINTERNAL *)lock);
 	if(result != 0)
-		dbg_msg("lock", "lock failed: %d", result);
+		SPDLOG_ERROR(FMT "Lock failed. ID: {}", result);
 #elif defined(CONF_FAMILY_WINDOWS)
 	EnterCriticalSection((LPCRITICAL_SECTION)lock);
 #else
@@ -870,7 +695,7 @@ void lock_unlock(LOCK lock)
 #if defined(CONF_FAMILY_UNIX)
 	int result = pthread_mutex_unlock((LOCKINTERNAL *)lock);
 	if(result != 0)
-		dbg_msg("lock", "unlock failed: %d", result);
+		SPDLOG_ERROR(FMT "Unlock failed. ID: {}", result);
 #elif defined(CONF_FAMILY_WINDOWS)
 	LeaveCriticalSection((LPCRITICAL_SECTION)lock);
 #else
@@ -881,6 +706,8 @@ void lock_unlock(LOCK lock)
 #pragma clang diagnostic pop
 #endif
 
+#define FMT "[Semaphore] "
+
 #if defined(CONF_FAMILY_WINDOWS)
 void sphore_init(SEMAPHORE *sem)
 {
@@ -889,44 +716,28 @@ void sphore_init(SEMAPHORE *sem)
 void sphore_wait(SEMAPHORE *sem) { WaitForSingleObject((HANDLE)*sem, INFINITE); }
 void sphore_signal(SEMAPHORE *sem) { ReleaseSemaphore((HANDLE)*sem, 1, NULL); }
 void sphore_destroy(SEMAPHORE *sem) { CloseHandle((HANDLE)*sem); }
-#elif defined(CONF_PLATFORM_MACOS)
-void sphore_init(SEMAPHORE *sem)
-{
-	char aBuf[64];
-	str_format(aBuf, sizeof(aBuf), "/%d-ddnet.tw-%p", pid(), (void *)sem);
-	*sem = sem_open(aBuf, O_CREAT | O_EXCL, S_IRWXU | S_IRWXG, 0);
-}
-void sphore_wait(SEMAPHORE *sem) { sem_wait(*sem); }
-void sphore_signal(SEMAPHORE *sem) { sem_post(*sem); }
-void sphore_destroy(SEMAPHORE *sem)
-{
-	char aBuf[64];
-	sem_close(*sem);
-	str_format(aBuf, sizeof(aBuf), "/%d-ddnet.tw-%p", pid(), (void *)sem);
-	sem_unlink(aBuf);
-}
 #elif defined(CONF_FAMILY_UNIX)
 void sphore_init(SEMAPHORE *sem)
 {
 	if(sem_init(sem, 0, 0) != 0)
-		dbg_msg("sphore", "init failed: %d", errno);
+		SPDLOG_ERROR(FMT "Init failed. ID: {}", errno);
 }
 
 void sphore_wait(SEMAPHORE *sem)
 {
 	if(sem_wait(sem) != 0)
-		dbg_msg("sphore", "wait failed: %d", errno);
+		SPDLOG_ERROR(FMT "Wait failed. ID: {}", errno);
 }
 
 void sphore_signal(SEMAPHORE *sem)
 {
 	if(sem_post(sem) != 0)
-		dbg_msg("sphore", "post failed: %d", errno);
+		SPDLOG_ERROR(FMT "Post failed. ID: {}", errno);
 }
 void sphore_destroy(SEMAPHORE *sem)
 {
 	if(sem_destroy(sem) != 0)
-		dbg_msg("sphore", "destroy failed: %d", errno);
+		SPDLOG_ERROR(FMT "Destroy failed. ID: {}", errno);
 }
 #endif
 
@@ -936,6 +747,8 @@ void set_new_tick(void)
 {
 	new_tick = 1;
 }
+
+#define FMT "[Clock] "
 
 /* -----  time ----- */
 int64 time_get_impl(void)
@@ -961,7 +774,7 @@ int64 time_get_impl(void)
 		struct timespec spec;
 		if(clock_gettime(CLOCK_MONOTONIC, &spec) != 0)
 		{
-			dbg_msg("clock", "gettime failed: %d", errno);
+			SPDLOG_ERROR(FMT "Getting time failed. ID: {}", errno);
 			return 0;
 		}
 		last = (int64)spec.tv_sec * (int64)1000000 + (int64)spec.tv_nsec / 1000;
@@ -1015,13 +828,15 @@ int64 time_get_microseconds(void)
 #endif
 }
 
+#define FMT "[Network] "
+
 /* -----  network ----- */
 static void netaddr_to_sockaddr_in(const NETADDR *src, struct sockaddr_in *dest)
 {
 	mem_zero(dest, sizeof(struct sockaddr_in));
 	if(src->type != NETTYPE_IPV4 && src->type != NETTYPE_WEBSOCKET_IPV4)
 	{
-		dbg_msg("system", "couldn't convert NETADDR of type %d to ipv4", src->type);
+		SPDLOG_ERROR(FMT "Couldn't convert NETADDR of type {} to IPv4", src->type);
 		return;
 	}
 
@@ -1035,7 +850,7 @@ static void netaddr_to_sockaddr_in6(const NETADDR *src, struct sockaddr_in6 *des
 	mem_zero(dest, sizeof(struct sockaddr_in6));
 	if(src->type != NETTYPE_IPV6)
 	{
-		dbg_msg("system", "couldn't not convert NETADDR of type %d to ipv6", src->type);
+		SPDLOG_ERROR(FMT "Couldn't convert NETADDR of type {} to IPv6", src->type);
 		return;
 	}
 
@@ -1072,7 +887,7 @@ static void sockaddr_to_netaddr(const struct sockaddr *src, NETADDR *dst)
 	else
 	{
 		mem_zero(dst, sizeof(struct sockaddr));
-		dbg_msg("system", "couldn't convert sockaddr of family %d", src->sa_family);
+		SPDLOG_ERROR(FMT "Couldn't convert SOCKADDR of family {}", src->sa_family);
 	}
 }
 
@@ -1401,7 +1216,7 @@ static void priv_net_close_socket(int sock)
 	closesocket(sock);
 #else
 	if(close(sock) != 0)
-		dbg_msg("socket", "close failed: %d", errno);
+		SPDLOG_ERROR(FMT "Socket closing failed. ID: {}", errno);
 #endif
 }
 
@@ -1448,9 +1263,9 @@ static int priv_net_create_socket(int domain, int type, struct sockaddr *addr, i
 		int error = WSAGetLastError();
 		if(FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, 0, error, 0, buf, sizeof(buf), 0) == 0)
 			buf[0] = 0;
-		dbg_msg("net", "failed to create socket with domain %d and type %d (%d '%s')", domain, type, error, buf);
+		SPDLOG_ERROR(FMT "Failed to create socket with domain {} and type {} ({} '{}')", domain, type, error, buf);
 #else
-		dbg_msg("net", "failed to create socket with domain %d and type %d (%d '%s')", domain, type, errno, strerror(errno));
+		SPDLOG_ERROR(FMT "Failed to create socket with domain {} and type {} ({} '{}')", domain, type, errno, strerror(errno));
 #endif
 		return -1;
 	}
@@ -1462,7 +1277,7 @@ static int priv_net_create_socket(int domain, int type, struct sockaddr *addr, i
 	{
 		int option = 1;
 		if(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option)) != 0)
-			dbg_msg("socket", "Setting SO_REUSEADDR failed: %d", errno);
+			SPDLOG_ERROR(FMT "Setting SO_REUSEADDR failed. ID: {} ", errno);
 	}
 #endif
 
@@ -1472,7 +1287,7 @@ static int priv_net_create_socket(int domain, int type, struct sockaddr *addr, i
 	{
 		int ipv6only = 1;
 		if(setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, (const char *)&ipv6only, sizeof(ipv6only)) != 0)
-			dbg_msg("socket", "Setting V6ONLY failed: %d", errno);
+			SPDLOG_ERROR(FMT "Setting V6_ONLY failed. ID: {} ", errno);
 	}
 #endif
 
@@ -1485,9 +1300,9 @@ static int priv_net_create_socket(int domain, int type, struct sockaddr *addr, i
 		int error = WSAGetLastError();
 		if(FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, 0, error, 0, buf, sizeof(buf), 0) == 0)
 			buf[0] = 0;
-		dbg_msg("net", "failed to bind socket with domain %d and type %d (%d '%s')", domain, type, error, buf);
+		SPDLOG_ERROR(FMT "Failed to bind socket with domain {} and type {} ({} '{}')", domain, type, error, buf);
 #else
-		dbg_msg("net", "failed to bind socket with domain %d and type %d (%d '%s')", domain, type, errno, strerror(errno));
+		SPDLOG_ERROR(FMT "Failed to bind socket with domain {} and type {} ({} '{}')", domain, type, errno, strerror(errno));
 #endif
 		priv_net_close_socket(sock);
 		return -1;
@@ -1519,14 +1334,14 @@ NETSOCKET net_udp_create(NETADDR bindaddr)
 
 			/* set broadcast */
 			if(setsockopt(socket, SOL_SOCKET, SO_BROADCAST, (const char *)&broadcast, sizeof(broadcast)) != 0)
-				dbg_msg("socket", "Setting BROADCAST on ipv4 failed: %d", errno);
+				SPDLOG_ERROR(FMT "Setting BROADCAST on IPv4 failed. ID: {} ", errno);
 
 			{
 				/* set DSCP/TOS */
 				int iptos = 0x10 /* IPTOS_LOWDELAY */;
 				//int iptos = 46; /* High Priority */
 				if(setsockopt(socket, IPPROTO_IP, IP_TOS, (char *)&iptos, sizeof(iptos)) != 0)
-					dbg_msg("socket", "Setting TOS on ipv4 failed: %d", errno);
+					SPDLOG_ERROR(FMT "Setting TOS on IPv4 failed. ID: {} ", errno);
 			}
 		}
 	}
@@ -1567,14 +1382,14 @@ NETSOCKET net_udp_create(NETADDR bindaddr)
 
 			/* set broadcast */
 			if(setsockopt(socket, SOL_SOCKET, SO_BROADCAST, (const char *)&broadcast, sizeof(broadcast)) != 0)
-				dbg_msg("socket", "Setting BROADCAST on ipv6 failed: %d", errno);
+				SPDLOG_ERROR(FMT "Setting BROADCAST on IPv6 failed. ID: {} ", errno);
 
 			{
 				/* set DSCP/TOS */
 				int iptos = 0x10 /* IPTOS_LOWDELAY */;
 				//int iptos = 46; /* High Priority */
 				if(setsockopt(socket, IPPROTO_IP, IP_TOS, (char *)&iptos, sizeof(iptos)) != 0)
-					dbg_msg("socket", "Setting TOS on ipv6 failed: %d", errno);
+					SPDLOG_ERROR(FMT "Setting TOS on IPv6 failed. ID: {} ", errno);
 			}
 		}
 	}
@@ -1608,7 +1423,7 @@ int net_udp_send(NETSOCKET sock, const NETADDR *addr, const void *data, int size
 			d = sendto((int)sock.ipv4sock, (const char *)data, size, 0, (struct sockaddr *)&sa, sizeof(sa));
 		}
 		else
-			dbg_msg("net", "can't send ipv4 traffic to this socket");
+			SPDLOG_ERROR(FMT "Can't send IPv4 traffic to this socket");
 	}
 
 #if defined(CONF_WEBSOCKETS)
@@ -1622,7 +1437,7 @@ int net_udp_send(NETSOCKET sock, const NETADDR *addr, const void *data, int size
 		}
 
 		else
-			dbg_msg("net", "can't send websocket_ipv4 traffic to this socket");
+			SPDLOG_ERROR(FMT "Can't send Websocket IPv4 traffic to this socket");
 	}
 #endif
 
@@ -1646,24 +1461,9 @@ int net_udp_send(NETSOCKET sock, const NETADDR *addr, const void *data, int size
 			d = sendto((int)sock.ipv6sock, (const char *)data, size, 0, (struct sockaddr *)&sa, sizeof(sa));
 		}
 		else
-			dbg_msg("net", "can't send ipv6 traffic to this socket");
+			SPDLOG_ERROR(FMT "Can't send IPv4 traffic to this socket");
 	}
-	/*
-	else
-		dbg_msg("net", "can't send to network of type %d", addr->type);
-		*/
 
-	/*if(d < 0)
-	{
-		char addrstr[256];
-		net_addr_str(addr, addrstr, sizeof(addrstr));
-
-		dbg_msg("net", "sendto error (%d '%s')", errno, strerror(errno));
-		dbg_msg("net", "\tsock = %d %x", sock, sock);
-		dbg_msg("net", "\tsize = %d %x", size, size);
-		dbg_msg("net", "\taddr = %s", addrstr);
-
-	}*/
 	network_stats.sent_bytes += size;
 	network_stats.sent_packets++;
 	return d;
@@ -1729,14 +1529,14 @@ int net_udp_recv(NETSOCKET sock, NETADDR *addr, void *buffer, int maxsize, MMSGS
 	{
 		socklen_t fromlen = sizeof(struct sockaddr_in);
 		bytes = recvfrom(sock.ipv4sock, (char *)buffer, maxsize, 0, (struct sockaddr *)&sockaddrbuf, &fromlen);
-		*data = buffer;
+		*data = (unsigned char *)buffer;
 	}
 
 	if(bytes <= 0 && sock.ipv6sock >= 0)
 	{
 		socklen_t fromlen = sizeof(struct sockaddr_in6);
 		bytes = recvfrom(sock.ipv6sock, (char *)buffer, maxsize, 0, (struct sockaddr *)&sockaddrbuf, &fromlen);
-		*data = buffer;
+		*data = (unsigned char *)buffer;
 	}
 #endif
 
@@ -1818,7 +1618,7 @@ int net_set_non_blocking(NETSOCKET sock)
 		ioctlsocket(sock.ipv4sock, FIONBIO, (unsigned long *)&mode);
 #else
 		if(ioctl(sock.ipv4sock, FIONBIO, (unsigned long *)&mode) == -1)
-			dbg_msg("socket", "setting ipv4 non-blocking failed: %d", errno);
+			SPDLOG_ERROR(FMT "Setting IPv4 non-blocking failed. ID: {}", errno);
 #endif
 	}
 
@@ -1828,7 +1628,7 @@ int net_set_non_blocking(NETSOCKET sock)
 		ioctlsocket(sock.ipv6sock, FIONBIO, (unsigned long *)&mode);
 #else
 		if(ioctl(sock.ipv6sock, FIONBIO, (unsigned long *)&mode) == -1)
-			dbg_msg("socket", "setting ipv6 non-blocking failed: %d", errno);
+			SPDLOG_ERROR(FMT "Setting IPv6 non-blocking failed. ID: {}", errno);
 #endif
 	}
 
@@ -1844,7 +1644,7 @@ int net_set_blocking(NETSOCKET sock)
 		ioctlsocket(sock.ipv4sock, FIONBIO, (unsigned long *)&mode);
 #else
 		if(ioctl(sock.ipv4sock, FIONBIO, (unsigned long *)&mode) == -1)
-			dbg_msg("socket", "setting ipv4 blocking failed: %d", errno);
+			SPDLOG_ERROR(FMT "Setting IPv4 blocking failed. ID: {}", errno);
 #endif
 	}
 
@@ -1854,7 +1654,7 @@ int net_set_blocking(NETSOCKET sock)
 		ioctlsocket(sock.ipv6sock, FIONBIO, (unsigned long *)&mode);
 #else
 		if(ioctl(sock.ipv6sock, FIONBIO, (unsigned long *)&mode) == -1)
-			dbg_msg("socket", "setting ipv6 blocking failed: %d", errno);
+			SPDLOG_ERROR(FMT "Setting IPv6 blocking failed. ID: {}", errno);
 #endif
 	}
 
@@ -1995,7 +1795,8 @@ int net_init(void)
 #if defined(CONF_FAMILY_WINDOWS)
 	WSADATA wsaData;
 	int err = WSAStartup(MAKEWORD(1, 1), &wsaData);
-	dbg_assert(err == 0, "network initialization failed.");
+	if(err != 0)
+		SPDLOG_DEBUG(FMT "Init failed");
 	return err == 0 ? 0 : 1;
 #endif
 
@@ -2441,6 +2242,8 @@ int time_season(void)
 	return SEASON_SPRING; // should never happen
 }
 
+#define FMT "[C-strings] "
+
 void str_append(char *dst, const char *src, int dst_size)
 {
 	int s = str_length(dst);
@@ -2755,7 +2558,8 @@ static int str_to_utf32_unchecked(const char *str, int **out)
 int str_utf32_dist_buffer(const int *a, int a_len, const int *b, int b_len, int *buf, int buf_len)
 {
 	int i, j;
-	dbg_assert(buf_len >= (a_len + 1) + (b_len + 1), "buffer too small");
+	if(buf_len < (a_len + 1) + (b_len + 1))
+		SPDLOG_DEBUG(FMT "Buffer is too small");
 	if(a_len > b_len)
 	{
 		int tmp1 = a_len;
@@ -2794,7 +2598,8 @@ int str_utf8_dist_buffer(const char *a_utf8, const char *b_utf8, int *buf, int b
 	int b_utf8_len = str_length(b_utf8);
 	int *a, *b; // UTF-32
 	int a_len, b_len; // UTF-32 length
-	dbg_assert(buf_len >= 2 * (a_utf8_len + 1 + b_utf8_len + 1), "buffer too small");
+	if(buf_len < 2 * (a_utf8_len + 1 + b_utf8_len + 1))
+		SPDLOG_DEBUG(FMT "Buffer is too small");
 	if(a_utf8_len > b_utf8_len)
 	{
 		const char *tmp2 = a_utf8;
@@ -2910,7 +2715,7 @@ static int byteval(const char *byte, unsigned char *dst)
 
 int str_hex_decode(void *dst, int dst_size, const char *src)
 {
-	unsigned char *cdst = dst;
+	unsigned char *cdst = (unsigned char *)dst;
 	int slen = str_length(src);
 	int len = slen / 2;
 	int i;
@@ -3533,6 +3338,8 @@ int os_is_winxp_or_lower(void)
 #endif
 }
 
+#define FMT "[Secure] "
+
 struct SECURE_RANDOM_DATA
 {
 	int initialized;
@@ -3580,8 +3387,11 @@ void generate_password(char *buffer, unsigned length, unsigned short *random, un
 	static const char VALUES[] = "ABCDEFGHKLMNPRSTUVWXYZabcdefghjkmnopqt23456789";
 	static const size_t NUM_VALUES = sizeof(VALUES) - 1; // Disregard the '\0'.
 	unsigned i;
-	dbg_assert(length >= random_length * 2 + 1, "too small buffer");
-	dbg_assert(NUM_VALUES * NUM_VALUES >= 2048, "need at least 2048 possibilities for 2-character sequences");
+
+	if(length < random_length * 2 + 1)
+		SPDLOG_DEBUG(FMT "Too small buffer: {} < {}", length, random_length);
+	if(NUM_VALUES * NUM_VALUES < 2048)
+		SPDLOG_DEBUG(FMT "Need at least 2048 possibilities for 2-character sequences: [{}] < 2048", NUM_VALUES * NUM_VALUES);
 
 	buffer[random_length * 2] = 0;
 
@@ -3599,10 +3409,14 @@ void secure_random_password(char *buffer, unsigned length, unsigned pw_length)
 {
 	unsigned short random[MAX_PASSWORD_LENGTH / 2];
 	// With 6 characters, we get a password entropy of log(2048) * 6/2 = 33bit.
-	dbg_assert(length >= pw_length + 1, "too small buffer");
-	dbg_assert(pw_length >= 6, "too small password length");
-	dbg_assert(pw_length % 2 == 0, "need an even password length");
-	dbg_assert(pw_length <= MAX_PASSWORD_LENGTH, "too large password length");
+	if(length < pw_length + 1)
+		SPDLOG_DEBUG(FMT "Too small password buffer: [{}] < {}", length, pw_length + 1);
+	if(pw_length < 6)
+		SPDLOG_DEBUG(FMT "Too small password length: [{}] < 6");
+	if(pw_length % 2 != 0)
+		SPDLOG_DEBUG(FMT "Not even password length: [{}]", pw_length);
+	if(pw_length > MAX_PASSWORD_LENGTH)
+		SPDLOG_DEBUG(FMT "Too large password length: [{}] > {}", pw_length, MAX_PASSWORD_LENGTH);
 
 	secure_random_fill(random, pw_length);
 
@@ -3615,21 +3429,15 @@ void secure_random_fill(void *bytes, unsigned length)
 {
 	if(!secure_random_data.initialized)
 	{
-		dbg_msg("secure", "called secure_random_fill before secure_random_init");
-		dbg_break();
+		SPDLOG_DEBUG(FMT "Called secure_random_fill before secure_random_init");
+		return;
 	}
 #if defined(CONF_FAMILY_WINDOWS)
-	if(!CryptGenRandom(secure_random_data.provider, length, bytes))
-	{
-		dbg_msg("secure", "CryptGenRandom failed, last_error=%ld", GetLastError());
-		dbg_break();
-	}
+	if(!CryptGenRandom(secure_random_data.provider, length, (BYTE *)bytes))
+		SPDLOG_DEBUG(FMT "CryptGenRandom failed: {}", GetLastError());
 #else
 	if(length != io_read(secure_random_data.urandom, bytes, length))
-	{
-		dbg_msg("secure", "io_read returned with a short read");
-		dbg_break();
-	}
+		SPDLOG_DEBUG(FMT "Too short. io_read failed");
 #endif
 }
 
@@ -3655,7 +3463,9 @@ static unsigned int find_next_power_of_two_minus_one(unsigned int n)
 int secure_rand_below(int below)
 {
 	unsigned int mask = find_next_power_of_two_minus_one(below);
-	dbg_assert(below > 0, "below must be positive");
+
+	if(below <= 0)
+		SPDLOG_DEBUG(FMT "Below must be positive");
 	while(1)
 	{
 		unsigned int n;
@@ -3668,6 +3478,6 @@ int secure_rand_below(int below)
 	}
 }
 
-#if defined(__cplusplus)
-}
-#endif
+//#if defined(__cplusplus)
+//}
+//#endif

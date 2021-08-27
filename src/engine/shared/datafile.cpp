@@ -10,6 +10,10 @@
 
 #include "uuid_manager.h"
 
+#include "spdlog/spdlog.h"
+
+#define FMT "[Datafile] "
+
 enum
 {
 	OFFSET_UUID_TYPE = 0x8000,
@@ -113,12 +117,12 @@ struct CDatafile
 
 bool CDataFileReader::Open(class IStorage *pStorage, const char *pFilename, int StorageType)
 {
-	dbg_msg("datafile", "loading. filename='%s'", pFilename);
+	spdlog::info(FMT "Loading '{}'...", pFilename);
 
 	IOHANDLE File = pStorage->OpenFile(pFilename, IOFLAG_READ, StorageType);
 	if(!File)
 	{
-		dbg_msg("datafile", "could not open '%s'", pFilename);
+		spdlog::warn(FMT "Couldn't open '{}'", pFilename);
 		return false;
 	}
 
@@ -152,14 +156,14 @@ bool CDataFileReader::Open(class IStorage *pStorage, const char *pFilename, int 
 	CDatafileHeader Header;
 	if(sizeof(Header) != io_read(File, &Header, sizeof(Header)))
 	{
-		dbg_msg("datafile", "couldn't load header");
+		spdlog::warn(FMT "Couldn't load header");
 		return 0;
 	}
 	if(Header.m_aID[0] != 'A' || Header.m_aID[1] != 'T' || Header.m_aID[2] != 'A' || Header.m_aID[3] != 'D')
 	{
 		if(Header.m_aID[0] != 'D' || Header.m_aID[1] != 'A' || Header.m_aID[2] != 'T' || Header.m_aID[3] != 'A')
 		{
-			dbg_msg("datafile", "wrong signature. %x %x %x %x", Header.m_aID[0], Header.m_aID[1], Header.m_aID[2], Header.m_aID[3]);
+			spdlog::warn(FMT "Wrong signature: {} {} {} {}", Header.m_aID[0], Header.m_aID[1], Header.m_aID[2], Header.m_aID[3]);
 			return 0;
 		}
 	}
@@ -169,9 +173,11 @@ bool CDataFileReader::Open(class IStorage *pStorage, const char *pFilename, int 
 #endif
 	if(Header.m_Version != 3 && Header.m_Version != 4)
 	{
-		dbg_msg("datafile", "wrong version. version=%x", Header.m_Version);
+		spdlog::warn(FMT "Wrong version: {}", Header.m_Version);
 		return 0;
 	}
+
+	spdlog::info(FMT "Loaded header: {}", pFilename);
 
 	// read in the rest except the data
 	unsigned Size = 0;
@@ -204,7 +210,7 @@ bool CDataFileReader::Open(class IStorage *pStorage, const char *pFilename, int 
 		io_close(pTmpDataFile->m_File);
 		free(pTmpDataFile);
 		pTmpDataFile = 0;
-		dbg_msg("datafile", "couldn't load the whole thing, wanted=%d got=%d", Size, ReadSize);
+		spdlog::warn(FMT "Couldn't load the whole thing. Wanted {} instead of {}", Size, ReadSize);
 		return false;
 	}
 
@@ -217,10 +223,10 @@ bool CDataFileReader::Open(class IStorage *pStorage, const char *pFilename, int 
 
 	//if(DEBUG)
 	{
-		dbg_msg("datafile", "allocsize=%d", AllocSize);
-		dbg_msg("datafile", "readsize=%d", ReadSize);
-		dbg_msg("datafile", "swaplen=%d", Header.m_Swaplen);
-		dbg_msg("datafile", "item_size=%d", m_pDataFile->m_Header.m_ItemSize);
+		spdlog::info(FMT "Allocsize: {}", AllocSize);
+		spdlog::info(FMT "Readsize: {}", ReadSize);
+		spdlog::info(FMT "Swaplen: {}", Header.m_Swaplen);
+		spdlog::info(FMT "Itemsize: {}", m_pDataFile->m_Header.m_ItemSize);
 	}
 
 	m_pDataFile->m_Info.m_pItemTypes = (CDatafileItemType *)m_pDataFile->m_pData;
@@ -234,43 +240,8 @@ bool CDataFileReader::Open(class IStorage *pStorage, const char *pFilename, int 
 		m_pDataFile->m_Info.m_pItemStart = (char *)&m_pDataFile->m_Info.m_pDataOffsets[m_pDataFile->m_Header.m_NumRawData];
 	m_pDataFile->m_Info.m_pDataStart = m_pDataFile->m_Info.m_pItemStart + m_pDataFile->m_Header.m_ItemSize;
 
-	dbg_msg("datafile", "loading done. datafile='%s'", pFilename);
+	spdlog::info(FMT "Loading done: {}", pFilename);
 
-	/*if(DEBUG)
-	{
-		
-		for(int i = 0; i < m_pDataFile->data.num_raw_data; i++)
-		{
-			void *p = datafile_get_data(df, i);
-			dbg_msg("datafile", "%d %d", (int)((char*)p - (char*)(&m_pDataFile->data)), size);
-		}
-
-		for(int i = 0; i < datafile_num_items(df); i++)
-		{
-			int type, id;
-			void *data = datafile_get_item(df, i, &type, &id);
-			dbg_msg("map", "\t%d: type=%x id=%x p=%p offset=%d", i, type, id, data, m_pDataFile->info.item_offsets[i]);
-			int *idata = (int*)data;
-			for(int k = 0; k < 3; k++)
-				dbg_msg("datafile", "\t\t%d=%d (%x)", k, idata[k], idata[k]);
-		}
-
-		for(int i = 0; i < m_pDataFile->data.num_m_aItemTypes; i++)
-		{
-			dbg_msg("map", "\t%d: type=%x start=%d num=%d", i,
-				m_pDataFile->info.m_aItemTypes[i].type,
-				m_pDataFile->info.m_aItemTypes[i].start,
-				m_pDataFile->info.m_aItemTypes[i].num);
-			for(int k = 0; k < m_pDataFile->info.m_aItemTypes[i].num; k++)
-			{
-				int type, id;
-				datafile_get_item(df, m_pDataFile->info.m_aItemTypes[i].start+k, &type, &id);
-				if(type != m_pDataFile->info.m_aItemTypes[i].type)
-					dbg_msg("map", "\tERROR");
-			}
-		}
-		
-	}*/
 
 	return true;
 }
@@ -337,7 +308,10 @@ void *CDataFileReader::GetDataImpl(int Index, int Swap)
 			unsigned long UncompressedSize = m_pDataFile->m_Info.m_pDataSizes[Index];
 			unsigned long s;
 
-			dbg_msg("datafile", "loading data index=%d size=%d uncompressed=%lu", Index, DataSize, UncompressedSize);
+			spdlog::info(FMT "Loading data...");
+			spdlog::info(FMT "Index: {}", Index);
+			spdlog::info(FMT "Size: {}", DataSize);
+			spdlog::info(FMT "Uncompressed: {}", UncompressedSize);
 			m_pDataFile->m_ppDataPtrs[Index] = (char *)malloc(UncompressedSize);
 
 			// read the compressed data
@@ -357,7 +331,9 @@ void *CDataFileReader::GetDataImpl(int Index, int Swap)
 		else
 		{
 			// load the data
-			dbg_msg("datafile", "loading data index=%d size=%d", Index, DataSize);
+			spdlog::info(FMT "Loading data...");
+			spdlog::info(FMT "Index: {}", Index);
+			spdlog::info(FMT "Size: {}", DataSize);
 			m_pDataFile->m_ppDataPtrs[Index] = (char *)malloc(DataSize);
 			io_seek(m_pDataFile->m_File, m_pDataFile->m_DataStartOffset + m_pDataFile->m_Info.m_pDataOffsets[Index], IOSEEK_START);
 			io_read(m_pDataFile->m_File, m_pDataFile->m_ppDataPtrs[Index], DataSize);
@@ -600,14 +576,22 @@ CDataFileWriter::~CDataFileWriter()
 
 bool CDataFileWriter::OpenFile(class IStorage *pStorage, const char *pFilename, int StorageType)
 {
-	dbg_assert(!m_File, "a file already exists");
+	if(m_File)
+	{
+		spdlog::error(FMT "File already exists: {}", pFilename);
+		return false;
+	}
 	m_File = pStorage->OpenFile(pFilename, IOFLAG_WRITE, StorageType);
 	return m_File != 0;
 }
 
 void CDataFileWriter::Init()
 {
-	dbg_assert(!m_File, "a file already exists");
+	if(m_File)
+	{
+		spdlog::error(FMT "Init failed. File already exists");
+		return;
+	}
 	m_NumItems = 0;
 	m_NumDatas = 0;
 	m_NumItemTypes = 0;
@@ -639,7 +623,11 @@ int CDataFileWriter::GetExtendedItemTypeIndex(int Type)
 	}
 
 	// Type not found, add it.
-	dbg_assert(m_NumExtendedItemTypes < MAX_EXTENDED_ITEM_TYPES, "too many extended item types");
+	if(m_NumExtendedItemTypes >= MAX_EXTENDED_ITEM_TYPES)
+	{
+		spdlog::error(FMT "Too many extended item types: {}", m_NumExtendedItemTypes);
+		return m_NumExtendedItemTypes;
+	}
 	int Index = m_NumExtendedItemTypes++;
 	m_aExtendedItemTypes[Index] = Type;
 
@@ -650,9 +638,21 @@ int CDataFileWriter::GetExtendedItemTypeIndex(int Type)
 
 int CDataFileWriter::AddItem(int Type, int ID, int Size, void *pData)
 {
-	dbg_assert((Type >= 0 && Type < MAX_ITEM_TYPES) || Type >= OFFSET_UUID, "incorrect type");
-	dbg_assert(m_NumItems < 1024, "too many items");
-	dbg_assert(Size % sizeof(int) == 0, "incorrect boundary");
+	if((Type < 0 && Type >= MAX_ITEM_TYPES) && Type < OFFSET_UUID)
+	{
+		spdlog::error(FMT "Incorrect type: {}", Type);
+		return m_NumItems - 1;
+	}
+	if(m_NumItems >= 1024)
+	{
+		spdlog::error(FMT "Too many items: {} >= 1024", m_NumItems);
+		return m_NumItems - 1;
+	}
+	if(Size % sizeof(int) != 0)
+	{
+		spdlog::error(FMT "Incorrect boundary");
+		return m_NumItems - 1;
+	}
 
 	if(Type >= OFFSET_UUID)
 	{
@@ -689,7 +689,11 @@ int CDataFileWriter::AddItem(int Type, int ID, int Size, void *pData)
 
 int CDataFileWriter::AddData(int Size, void *pData, int CompressionLevel)
 {
-	dbg_assert(m_NumDatas < 1024, "too much data");
+	if(m_NumDatas >= 1024)
+	{
+		spdlog::error(FMT "Too much data: {} >= 1024", m_NumDatas);
+		return m_NumDatas - 1;
+	}
 
 	CDataInfo *pInfo = &m_pDatas[m_NumDatas];
 	unsigned long s = compressBound(Size);
@@ -698,8 +702,9 @@ int CDataFileWriter::AddData(int Size, void *pData, int CompressionLevel)
 	int Result = compress2((Bytef *)pCompData, &s, (Bytef *)pData, Size, CompressionLevel); // ignore_convention
 	if(Result != Z_OK)
 	{
-		dbg_msg("datafile", "compression error %d", Result);
-		dbg_assert(0, "zlib error");
+		spdlog::error(FMT "Compression failed: {}", Result);
+		free(pCompData);
+		return m_NumDatas - 1;
 	}
 
 	pInfo->m_UncompressedSize = Size;
@@ -714,7 +719,10 @@ int CDataFileWriter::AddData(int Size, void *pData, int CompressionLevel)
 
 int CDataFileWriter::AddDataSwapped(int Size, void *pData)
 {
-	dbg_assert(Size % sizeof(int) == 0, "incorrect boundary");
+	if(Size % sizeof(int) != 0)
+	{
+		spdlog::error(FMT "Incorrect boundary");
+	}
 
 #if defined(CONF_ARCH_ENDIAN_BIG)
 	void *pSwapped = malloc(Size); // temporary buffer that we use during compression
@@ -737,16 +745,9 @@ int CDataFileWriter::Finish()
 	int TypesSize, HeaderSize, OffsetSize, FileSize, SwapSize;
 	int DataSize = 0;
 	CDatafileHeader Header;
-
-	// we should now write this file!
-	//if(DEBUG)
-	//	dbg_msg("datafile", "writing");
-
 	// calculate sizes
 	for(int i = 0; i < m_NumItems; i++)
 	{
-		//if(DEBUG)
-		//	dbg_msg("datafile", "item=%d size=%d (%d)", i, m_pItems[i].m_Size, m_pItems[i].m_Size + (int)sizeof(CDatafileItem));
 		ItemSize += m_pItems[i].m_Size + sizeof(CDatafileItem);
 	}
 
@@ -781,8 +782,6 @@ int CDataFileWriter::Finish()
 		Header.m_DataSize = DataSize;
 
 		// write Header
-		//if(DEBUG)
-		//	dbg_msg("datafile", "HeaderSize=%d", (int)sizeof(Header));
 #if defined(CONF_ARCH_ENDIAN_BIG)
 		swap_endian(&Header, sizeof(int), sizeof(Header) / sizeof(int));
 #endif
@@ -799,8 +798,6 @@ int CDataFileWriter::Finish()
 			Info.m_Type = i;
 			Info.m_Start = Count;
 			Info.m_Num = m_pItemTypes[i].m_Num;
-			//if(DEBUG)
-			//	dbg_msg("datafile", "writing type=%x start=%d num=%d", Info.m_Type, Info.m_Start, Info.m_Num);
 #if defined(CONF_ARCH_ENDIAN_BIG)
 			swap_endian(&Info, sizeof(int), sizeof(CDatafileItemType) / sizeof(int));
 #endif
@@ -818,8 +815,6 @@ int CDataFileWriter::Finish()
 			int k = m_pItemTypes[i].m_First;
 			while(k != -1)
 			{
-				//if(DEBUG)
-				//	dbg_msg("datafile", "writing item offset num=%d offset=%d", k, Offset);
 				int Temp = Offset;
 #if defined(CONF_ARCH_ENDIAN_BIG)
 				swap_endian(&Temp, sizeof(int), sizeof(Temp) / sizeof(int));
@@ -836,8 +831,6 @@ int CDataFileWriter::Finish()
 	// write data offsets
 	for(int i = 0, Offset = 0; i < m_NumDatas; i++)
 	{
-		//if(DEBUG)
-		//	dbg_msg("datafile", "writing data offset num=%d offset=%d", i, Offset);
 		int Temp = Offset;
 #if defined(CONF_ARCH_ENDIAN_BIG)
 		swap_endian(&Temp, sizeof(int), sizeof(Temp) / sizeof(int));
@@ -849,8 +842,6 @@ int CDataFileWriter::Finish()
 	// write data uncompressed sizes
 	for(int i = 0; i < m_NumDatas; i++)
 	{
-		//if(DEBUG)
-		//	dbg_msg("datafile", "writing data uncompressed size num=%d size=%d", i, m_pDatas[i].m_UncompressedSize);
 		int UncompressedSize = m_pDatas[i].m_UncompressedSize;
 #if defined(CONF_ARCH_ENDIAN_BIG)
 		swap_endian(&UncompressedSize, sizeof(int), sizeof(UncompressedSize) / sizeof(int));
@@ -870,8 +861,6 @@ int CDataFileWriter::Finish()
 				CDatafileItem Item;
 				Item.m_TypeAndID = (i << 16) | m_pItems[k].m_ID;
 				Item.m_Size = m_pItems[k].m_Size;
-				//if(DEBUG)
-				//	dbg_msg("datafile", "writing item type=%x idx=%d id=%d size=%d", i, k, m_pItems[k].m_ID, m_pItems[k].m_Size);
 
 #if defined(CONF_ARCH_ENDIAN_BIG)
 				swap_endian(&Item, sizeof(int), sizeof(Item) / sizeof(int));
@@ -889,8 +878,6 @@ int CDataFileWriter::Finish()
 	// write data
 	for(int i = 0; i < m_NumDatas; i++)
 	{
-		//if(DEBUG)
-		//	dbg_msg("datafile", "writing data id=%d size=%d", i, m_pDatas[i].m_CompressedSize);
 		io_write(m_File, m_pDatas[i].m_pCompressedData, m_pDatas[i].m_CompressedSize);
 	}
 
@@ -909,7 +896,5 @@ int CDataFileWriter::Finish()
 	io_close(m_File);
 	m_File = 0;
 
-	//if(DEBUG)
-	//	dbg_msg("datafile", "done");
 	return 0;
 }

@@ -10,6 +10,10 @@
 
 #include "linereader.h"
 
+#include "spdlog/spdlog.h"
+
+#define FMT "[Master] "
+
 class CMasterServer : public IEngineMasterServer
 {
 public:
@@ -49,7 +53,7 @@ public:
 		if(m_State != STATE_INIT && m_State != STATE_READY)
 			return -1;
 
-		dbg_msg("engine/mastersrv", "refreshing master server addresses");
+		spdlog::info(FMT "Refreshing master server addresses...");
 
 		// add lookup jobs
 		for(int i = 0; i < MAX_MASTERSERVERS; i++)
@@ -92,7 +96,7 @@ public:
 
 		if(m_State == STATE_READY)
 		{
-			dbg_msg("engine/mastersrv", "saving addresses");
+			spdlog::info(FMT "Saving master server addresses...");
 			Save();
 		}
 	}

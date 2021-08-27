@@ -28,6 +28,7 @@ public:
 
 	void Reset();
 
+	CCharacter *Character() const { return m_pCharacter; };
 	void TryRespawn();
 	void Respawn();
 	void SetTeam(int Team);
@@ -127,8 +128,6 @@ public:
 	int m_ChatScore;
 
 	int64 m_LastSQLQuery;
-
-	explicit operator CCharacter *() const { return m_pCharacter; }
 };
 
 #endif

@@ -12,6 +12,10 @@
 #include <engine/shared/protocol.h>
 #include <game/generated/protocol.h>
 
+#include "spdlog/spdlog.h"
+
+#define FMT "[Network] "
+
 const int DummyMapCrc = 0x6c760ac4;
 unsigned char g_aDummyMapData[] = {
 	0x44, 0x41, 0x54, 0x41, 0x04, 0x00, 0x00, 0x00, 0x22, 0x01, 0x00, 0x00,
@@ -111,13 +115,12 @@ int CNetServer::Close()
 int CNetServer::Drop(int ClientID, const char *pReason)
 {
 	// TODO: insert lots of checks here
-	/*NETADDR Addr = ClientAddr(ClientID);
+	NETADDR Addr = *ClientAddr(ClientID);
+	spdlog::info(FMT "Client dropped...");
+	spdlog::info(FMT "ID: {}", ClientID);
+	spdlog::info(FMT "IP: {}.{}.{}.{}", Addr.ip[0], Addr.ip[1], Addr.ip[2], Addr.ip[3]);
+	spdlog::info(FMT "Reason: {}", pReason);
 
-	dbg_msg("net_server", "client dropped. cid=%d ip=%d.%d.%d.%d reason=\"%s\"",
-		ClientID,
-		Addr.ip[0], Addr.ip[1], Addr.ip[2], Addr.ip[3],
-		pReason
-		);*/
 	if(m_pfnDelClient)
 		m_pfnDelClient(ClientID, pReason, m_pUser);
 
@@ -273,7 +276,7 @@ int CNetServer::TryAcceptClient(NETADDR &Addr, SECURITY_TOKEN SecurityToken, boo
 	{
 		char aAddrStr[NETADDR_MAXSTRSIZE];
 		net_addr_str(&Addr, aAddrStr, sizeof(aAddrStr), true);
-		dbg_msg("security", "client accepted %s", aAddrStr);
+		spdlog::info(FMT "Client accepted: {}", aAddrStr);
 	}
 
 	if(VanillaAuth)
@@ -316,27 +319,6 @@ void CNetServer::OnPreConnMsg(NETADDR &Addr, CNetPacketConstruct &Packet)
 	bool IsCtrl = Packet.m_Flags & NET_PACKETFLAG_CONTROL;
 	int CtrlMsg = m_RecvUnpacker.m_Data.m_aChunkData[0];
 
-	// log flooding
-	//TODO: remove
-	if(g_Config.m_Debug)
-	{
-		int64 Now = time_get();
-
-		if(Now - m_TimeNumConAttempts > time_freq())
-			// reset
-			m_NumConAttempts = 0;
-
-		m_NumConAttempts++;
-
-		if(m_NumConAttempts > 100)
-		{
-			dbg_msg("security", "flooding detected");
-
-			m_TimeNumConAttempts = Now;
-			m_NumConAttempts = 0;
-		}
-	}
-
 	if(IsCtrl && CtrlMsg == NET_CTRLMSG_CONNECT)
 	{
 		if(g_Config.m_SvVanillaAntiSpoof && g_Config.m_Password[0] == '\0')
@@ -358,11 +340,6 @@ void CNetServer::OnPreConnMsg(NETADDR &Addr, CNetPacketConstruct &Packet)
 					m_VConnNum = 1;
 					m_VConnFirst = Now;
 				}
-			}
-
-			if(g_Config.m_Debug && Flooding)
-			{
-				dbg_msg("security", "vanilla connection flooding detected");
 			}
 
 			// simulate accept
@@ -456,21 +433,15 @@ void CNetServer::OnPreConnMsg(NETADDR &Addr, CNetPacketConstruct &Packet)
 			SECURITY_TOKEN SecurityToken = Unpacker.GetInt();
 			if(SecurityToken == GetVanillaToken(Addr))
 			{
-				if(g_Config.m_Debug)
-					dbg_msg("security", "new client (vanilla handshake)");
+				spdlog::debug(FMT "New client (vanilla handshake)");
 				// try to accept client skipping auth state
 				TryAcceptClient(Addr, NET_SECURITY_TOKEN_UNSUPPORTED, true);
 			}
-			else if(g_Config.m_Debug)
-				dbg_msg("security", "invalid token (vanilla handshake)");
+			else
+				spdlog::debug(FMT "Invalid token (vanilla handshake)");
 		}
 		else
-		{
-			if(g_Config.m_Debug)
-			{
-				dbg_msg("security", "invalid preconn msg %d", Msg);
-			}
-		}
+			spdlog::debug(FMT "Invalid pre-message: {}", Msg);
 	}
 }
 
@@ -491,8 +462,7 @@ void CNetServer::OnConnCtrlMsg(NETADDR &Addr, int ClientID, int ControlMsg, cons
 			SendControl(Addr, NET_CTRLMSG_CONNECTACCEPT, SECURITY_TOKEN_MAGIC, sizeof(SECURITY_TOKEN_MAGIC), Token);
 		}
 
-		if(g_Config.m_Debug)
-			dbg_msg("security", "client %d wants to reconnect", ClientID);
+		spdlog::debug(FMT "Client {} wants to reconnect", ClientID);
 	}
 	else if(ControlMsg == NET_CTRLMSG_ACCEPT && Packet.m_DataSize == 1 + sizeof(SECURITY_TOKEN))
 	{
@@ -501,8 +471,7 @@ void CNetServer::OnConnCtrlMsg(NETADDR &Addr, int ClientID, int ControlMsg, cons
 		{
 			// correct token
 			// try to accept client
-			if(g_Config.m_Debug)
-				dbg_msg("security", "client %d reconnect", ClientID);
+			spdlog::debug(FMT "Client {} reconnect", ClientID);
 
 			// reset netconn and process rejoin
 			m_aSlots[ClientID].m_Connection.Reset(true);
@@ -536,15 +505,13 @@ void CNetServer::OnTokenCtrlMsg(NETADDR &Addr, int ControlMsg, const CNetPacketC
 		{
 			// correct token
 			// try to accept client
-			if(g_Config.m_Debug)
-				dbg_msg("security", "new client (ddnet token)");
+			spdlog::debug(FMT "New client (ddnet token)");
 			TryAcceptClient(Addr, Token);
 		}
 		else
 		{
 			// invalid token
-			if(g_Config.m_Debug)
-				dbg_msg("security", "invalid token");
+			spdlog::debug(FMT "Invalid token");
 		}
 	}
 }
@@ -732,7 +699,7 @@ int CNetServer::Send(CNetChunk *pChunk)
 {
 	if(pChunk->m_DataSize >= NET_MAX_PAYLOAD)
 	{
-		dbg_msg("netserver", "packet payload too big. %d. dropping packet", pChunk->m_DataSize);
+		spdlog::warn(FMT "Packet payload too big: {}. Dropping packet...", pChunk->m_DataSize);
 		return -1;
 	}
 
@@ -745,8 +712,11 @@ int CNetServer::Send(CNetChunk *pChunk)
 	else
 	{
 		int Flags = 0;
-		dbg_assert(pChunk->m_ClientID >= 0, "errornous client id");
-		dbg_assert(pChunk->m_ClientID < MaxClients(), "errornous client id");
+		if(pChunk->m_ClientID < 0 || pChunk->m_ClientID >= MaxClients())
+		{
+			spdlog::error(FMT "Errornous client ID: {}", pChunk->m_ClientID);
+			return -1;
+		}
 
 		if(pChunk->m_Flags & NETSENDFLAG_VITAL)
 			Flags = NET_CHUNKFLAG_VITAL;

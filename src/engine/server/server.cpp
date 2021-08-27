@@ -43,6 +43,8 @@
 #include <windows.h>
 #endif
 
+#define FMT "[Snap ID Pool] "
+
 CSnapIDPool::CSnapIDPool()
 {
 	Reset();
@@ -65,9 +67,11 @@ void CSnapIDPool::Reset()
 int CSnapIDPool::NewID()
 {
 	int ID = m_FirstFree;
-	dbg_assert(ID != -1, "id error");
 	if(ID == -1)
+	{
+		spdlog::error(FMT "First free ID is invalid");
 		return ID;
+	}
 	m_FirstFree = m_aIDs[m_FirstFree].m_Next;
 	m_aIDs[ID].m_State = 1;
 	m_Usage++;
@@ -79,12 +83,18 @@ void CSnapIDPool::FreeID(int ID)
 {
 	if(ID < 0)
 		return;
-	dbg_assert(m_aIDs[ID].m_State == 1, "id is not allocated");
+
+	if(m_aIDs[ID].m_State != 1)
+	{
+		spdlog::error(FMT "ID is not allocated: {}", ID);
+	}
 
 	m_InUsage--;
 	m_aIDs[ID].m_State = 2;
 	m_aIDs[ID].m_Next = -1;
 }
+
+#define FMT "[Server Bans] "
 
 void CServerBan::InitServerBan(IConsole *pConsole, IStorage *pStorage, CServer *pServer)
 {
@@ -193,6 +203,8 @@ void CServerBan::ConBanExt(IConsole::IResult *pResult, void *pUser)
 		ConBan(pResult, pUser);
 }
 
+#define FMT "[Server] "
+
 void CServer::CClient::Reset()
 {
 	// reset input
@@ -288,7 +300,12 @@ bool CServer::IsClientNameAvailable(int ClientID, const char *pNameRequest)
 
 bool CServer::SetClientNameImpl(int ClientID, const char *pNameRequest, bool Set)
 {
-	dbg_assert(0 <= ClientID && ClientID < MAX_CLIENTS, "invalid client id");
+	if(MAX_CLIENTS < ClientID || ClientID > 0)
+	{
+		spdlog::error(FMT "Invalid client ID: {}", ClientID);
+		return false;
+	}
+
 	if(m_aClients[ClientID].m_State < CClient::STATE_READY)
 		return false;
 
@@ -479,8 +496,16 @@ const char *CServer::GetAuthName(int ClientID) const
 
 int CServer::GetClientInfo(int ClientID, CClientInfo *pInfo) const
 {
-	dbg_assert(ClientID >= 0 && ClientID < MAX_CLIENTS, "client_id is not valid");
-	dbg_assert(pInfo != 0, "info can not be null");
+	if(MAX_CLIENTS < ClientID || ClientID > 0)
+	{
+		spdlog::error(FMT "Invalid client ID: {}", ClientID);
+		return 0;
+	}
+	if(!pInfo)
+	{
+		spdlog::error(FMT "Client info is invalid: {}", ClientID);
+		return 0;
+	}
 
 	if(m_aClients[ClientID].m_State == CClient::STATE_INGAME)
 	{
@@ -505,7 +530,11 @@ int CServer::GetClientInfo(int ClientID, CClientInfo *pInfo) const
 
 void CServer::SetClientDDNetVersion(int ClientID, int DDNetVersion)
 {
-	dbg_assert(ClientID >= 0 && ClientID < MAX_CLIENTS, "client_id is not valid");
+	if(MAX_CLIENTS < ClientID || ClientID > 0)
+	{
+		spdlog::error(FMT "Invalid client ID: {}", ClientID);
+		return;
+	}
 
 	if(m_aClients[ClientID].m_State == CClient::STATE_INGAME)
 	{
@@ -516,13 +545,24 @@ void CServer::SetClientDDNetVersion(int ClientID, int DDNetVersion)
 
 void CServer::GetClientAddr(int ClientID, char *pAddrStr, int Size) const
 {
-	if(ClientID >= 0 && ClientID < MAX_CLIENTS && m_aClients[ClientID].m_State == CClient::STATE_INGAME)
+	if(MAX_CLIENTS < ClientID || ClientID > 0)
+	{
+		spdlog::error(FMT "Invalid client ID: {}", ClientID);
+		return;
+	}
+
+	if(m_aClients[ClientID].m_State == CClient::STATE_INGAME)
 		net_addr_str(m_NetServer.ClientAddr(ClientID), pAddrStr, Size, false);
 }
 
 const char *CServer::ClientName(int ClientID) const
 {
-	if(ClientID < 0 || ClientID >= MAX_CLIENTS || m_aClients[ClientID].m_State == CServer::CClient::STATE_EMPTY)
+	if(MAX_CLIENTS < ClientID || ClientID > 0)
+	{
+		spdlog::error(FMT "Invalid client ID: {}", ClientID);
+		return "⟳ 2XP ⟳";
+	}
+	if(m_aClients[ClientID].m_State == CServer::CClient::STATE_EMPTY)
 		return "⟳ 2XP ⟳";
 	if(m_aClients[ClientID].m_State == CServer::CClient::STATE_INGAME)
 		return m_aClients[ClientID].m_aName;
@@ -532,7 +572,12 @@ const char *CServer::ClientName(int ClientID) const
 
 const char *CServer::ClientClan(int ClientID) const
 {
-	if(ClientID < 0 || ClientID >= MAX_CLIENTS || m_aClients[ClientID].m_State == CServer::CClient::STATE_EMPTY)
+	if(MAX_CLIENTS < ClientID || ClientID > 0)
+	{
+		spdlog::error(FMT "Invalid client ID: {}", ClientID);
+		return "⟳";
+	}
+	if(m_aClients[ClientID].m_State == CServer::CClient::STATE_EMPTY)
 		return "⟳";
 	if(m_aClients[ClientID].m_State == CServer::CClient::STATE_INGAME)
 		return m_aClients[ClientID].m_aClan;
@@ -542,7 +587,12 @@ const char *CServer::ClientClan(int ClientID) const
 
 int CServer::ClientCountry(int ClientID) const
 {
-	if(ClientID < 0 || ClientID >= MAX_CLIENTS || m_aClients[ClientID].m_State == CServer::CClient::STATE_EMPTY)
+	if(MAX_CLIENTS < ClientID || ClientID > 0)
+	{
+		spdlog::error(FMT "Invalid client ID: {}", ClientID);
+		return -1;
+	}
+	if(m_aClients[ClientID].m_State == CServer::CClient::STATE_EMPTY)
 		return -1;
 	if(m_aClients[ClientID].m_State == CServer::CClient::STATE_INGAME)
 		return m_aClients[ClientID].m_Country;
@@ -640,7 +690,7 @@ static inline bool RepackMsg(const CMsgPacker *pMsg, CPacker &Packer, bool Sixup
 				MsgId -= 11;
 			else
 			{
-				dbg_msg("net", "DROP send sys %d", MsgId);
+				spdlog::error(FMT "DROP send sys: {}", MsgId);
 				return true;
 			}
 		}
@@ -1860,7 +1910,7 @@ void CServer::CacheServerInfo(CCache *pCache, int Type, bool SendClients)
 	case SERVERINFO_64_LEGACY: Remaining = 24; break;
 	case SERVERINFO_VANILLA: Remaining = VANILLA_MAX_CLIENTS; break;
 	case SERVERINFO_INGAME: Remaining = VANILLA_MAX_CLIENTS; break;
-	default: dbg_assert(0, "caught earlier, unreachable"); return;
+	default: spdlog::error(FMT "Unreachable"); return;
 	}
 
 	// Use the following strategy for sending:
@@ -2029,7 +2079,7 @@ void CServer::SendServerInfo(const NETADDR *pAddr, int Token, int Type, bool Sen
 		}
 		else
 		{
-			dbg_assert(false, "unknown serverinfo type");
+			spdlog::error(FMT "Got unknown server info type: {}", Type);
 		}
 
 		p.AddRaw(Chunk.m_aData, Chunk.m_DataSize);
@@ -2244,8 +2294,8 @@ int CServer::LoadMap(const char *pMapName)
 		if(!File)
 		{
 			g_Config.m_SvSixup = 0;
-			dbg_msg("sixup", "couldn't load map %s", aBuf);
-			dbg_msg("sixup", "disabling 0.7 compatibility");
+			spdlog::warn(FMT "Couldn't load map: {}", aBuf);
+			spdlog::warn(FMT "Disabling 0.7 compatibility");
 		}
 		else
 		{
@@ -2301,7 +2351,7 @@ int CServer::Run()
 	// load map
 	if(!LoadMap(g_Config.m_SvMap))
 	{
-		dbg_msg("server", "failed to load map. mapname='%s'", g_Config.m_SvMap);
+		spdlog::critical(FMT "Failed to load map: {}", g_Config.m_SvMap);
 		return -1;
 	}
 
@@ -2319,13 +2369,13 @@ int CServer::Run()
 	{
 		if(Port != 0 || BindAddr.port >= 8310)
 		{
-			dbg_msg("server", "couldn't open socket. port %d might already be in use", BindAddr.port);
+			spdlog::critical(FMT "Couldn't open socket. Port {} might be already in use", BindAddr.port);
 			return -1;
 		}
 	}
 
 	if(Port == 0)
-		dbg_msg("server", "using port %d", BindAddr.port);
+		spdlog::info(FMT "Using port {}", BindAddr.port);
 
 #if defined(CONF_UPNP)
 	m_UPnP.Open(BindAddr);
@@ -2357,9 +2407,9 @@ int CServer::Run()
 
 	if(m_AuthManager.IsGenerated())
 	{
-		dbg_msg("server", "+-------------------------+");
-		dbg_msg("server", "| rcon password: '%s' |", g_Config.m_SvRconPassword);
-		dbg_msg("server", "+-------------------------+");
+		spdlog::info(FMT "+-------------------------+");
+		spdlog::info(FMT "| rcon password: '{}' |", g_Config.m_SvRconPassword);
+		spdlog::info(FMT "+-------------------------+");
 	}
 
 	// start game
@@ -2576,7 +2626,7 @@ int CServer::Run()
 	const char *pDisconnectReason = "[2XP] SHUTDOWN [2XP]\n Contact admin if server wasn't reloaded.";
 	if(ErrorShutdown())
 	{
-		dbg_msg("server", "shutdown from game server (%s)", m_aErrorShutdownReason);
+		spdlog::critical(FMT "Shutdown from gameserver: {}", m_aErrorShutdownReason);
 		pDisconnectReason = m_aErrorShutdownReason;
 	}
 	// disconnect all clients on shutdown
@@ -3294,6 +3344,8 @@ void CServer::RegisterCommands()
 	m_pGameServer->OnConsoleInit();
 }
 
+#define FMT "[Snapshot] "
+
 int CServer::SnapNewID()
 {
 	return m_IDPool.NewID();
@@ -3310,7 +3362,8 @@ void *CServer::SnapNewItem(int Type, int ID, int Size)
 	{
 		g_UuidManager.GetUuid(Type);
 	}
-	dbg_assert(ID >= 0 && ID <= 0xffff, "incorrect id");
+	if(!(ID >= 0 && ID <= 0xffff))
+		spdlog::error(FMT "Incorrect snap ID: {}", ID);
 	return ID < 0 ? 0 : m_SnapshotBuilder.NewItem(Type, ID, Size);
 }
 
@@ -3320,6 +3373,8 @@ void CServer::SnapSetStaticsize(int ItemType, int Size)
 }
 
 static CServer *CreateServer() { return new CServer(); }
+
+#define FMT "[Server] "
 
 int main(int argc, const char **argv) // ignore_convention
 {
@@ -3339,7 +3394,7 @@ int main(int argc, const char **argv) // ignore_convention
 
 	if(secure_random_init() != 0)
 	{
-		dbg_msg("secure", "could not initialize secure RNG");
+		spdlog::error(FMT "Couldn't initialize secure RNG");
 		return -1;
 	}
 
@@ -3406,7 +3461,7 @@ int main(int argc, const char **argv) // ignore_convention
 	pEngine->InitLogfile();
 
 	// run the server
-	dbg_msg("server", "starting...");
+	spdlog::info(FMT "Starting...");
 	int Ret = pServer->Run();
 
 	// free
@@ -3419,7 +3474,12 @@ int main(int argc, const char **argv) // ignore_convention
 
 void CServer::GetClientAddr(int ClientID, NETADDR *pAddr) const
 {
-	if(ClientID >= 0 && ClientID < MAX_CLIENTS && m_aClients[ClientID].m_State == CClient::STATE_INGAME)
+	if(MAX_CLIENTS < ClientID || ClientID > 0)
+	{
+		spdlog::error(FMT "Invalid client ID: {}", ClientID);
+		return;
+	}
+	if(m_aClients[ClientID].m_State == CClient::STATE_INGAME)
 	{
 		*pAddr = *m_NetServer.ClientAddr(ClientID);
 	}

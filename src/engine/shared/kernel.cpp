@@ -3,6 +3,10 @@
 #include <base/system.h>
 #include <engine/kernel.h>
 
+#include "spdlog/spdlog.h"
+
+#define FMT "[Kernel] "
+
 class CKernel : public IKernel
 {
 	enum
@@ -62,19 +66,19 @@ public:
 		// TODO: More error checks here
 		if(!pInterface)
 		{
-			dbg_msg("kernel", "ERROR: couldn't register interface %s. null pointer given", pName);
+			spdlog::error(FMT "Couldn't register interface {}. Null pointer given", pName);
 			return false;
 		}
 
 		if(m_NumInterfaces == MAX_INTERFACES)
 		{
-			dbg_msg("kernel", "ERROR: couldn't register interface '%s'. maximum of interfaces reached", pName);
+			spdlog::error(FMT "Couldn't register interface {}. Maximum of interfaces reached", pName);
 			return false;
 		}
 
 		if(FindInterfaceInfo(pName) != 0)
 		{
-			dbg_msg("kernel", "ERROR: couldn't register interface '%s'. interface already exists", pName);
+			spdlog::error(FMT "Couldn't register interface {}. Interface already exists", pName);
 			return false;
 		}
 
@@ -91,7 +95,7 @@ public:
 	{
 		if(FindInterfaceInfo(pName) == 0)
 		{
-			dbg_msg("kernel", "ERROR: couldn't reregister interface '%s'. interface doesn't exist", pName);
+			spdlog::error(FMT "Couldn't re-register interface {}. Interface doesn't exist", pName);
 			return false;
 		}
 
@@ -105,7 +109,7 @@ public:
 		CInterfaceInfo *pInfo = FindInterfaceInfo(pName);
 		if(!pInfo)
 		{
-			dbg_msg("kernel", "failed to find interface with the name '%s'", pName);
+			spdlog::error(FMT "Failed to find interface with the name '{}'", pName);
 			return 0;
 		}
 		return pInfo->m_pInterface;

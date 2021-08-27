@@ -9,6 +9,10 @@
 #include <engine/shared/network.h>
 #include <engine/storage.h>
 
+#include "spdlog/spdlog.h"
+
+#define FMT "[Engine] "
+
 CHostLookup::CHostLookup()
 {
 }
@@ -57,18 +61,22 @@ public:
 	{
 		if(!Test)
 		{
+			spdlog::set_pattern("[%T %z] [^%l%$] %v");
+			spdlog::set_level(spdlog::level::critical);
 			if(!Silent)
-				dbg_logger_stdout();
-			dbg_logger_debugger();
+				spdlog::set_level(spdlog::level::info);
+#ifdef CONF_DEBUG
+			spdlog::set_level(spdlog::level::debug);
+#endif
 
 			//
-			dbg_msg("engine", "running on %s-%s-%s", CONF_FAMILY_STRING, CONF_PLATFORM_STRING, CONF_ARCH_STRING);
+			spdlog::info(FMT "Running on {}-{}-{}", CONF_FAMILY_STRING, CONF_PLATFORM_STRING, CONF_ARCH_STRING);
 #ifdef CONF_ARCH_ENDIAN_LITTLE
-			dbg_msg("engine", "arch is little endian");
+			spdlog::info(FMT "Arch: Little Endian");
 #elif defined(CONF_ARCH_ENDIAN_BIG)
-			dbg_msg("engine", "arch is big endian");
+			spdlog::info(FMT "Arch: Big Endian");
 #else
-			dbg_msg("engine", "unknown endian");
+			spdlog::warn(FMT "Arch: Unknown");
 #endif
 
 			// init the network
@@ -95,14 +103,13 @@ public:
 	void InitLogfile()
 	{
 		// open logfile if needed
-		if(g_Config.m_Logfile[0])
-			dbg_logger_file(g_Config.m_Logfile);
+		//if(g_Config.m_Logfile[0])
+			//dbg_logger_file(g_Config.m_Logfile);
 	}
 
 	void AddJob(std::shared_ptr<IJob> pJob)
 	{
-		if(g_Config.m_Debug)
-			dbg_msg("engine", "job added");
+		spdlog::debug(FMT "Job added");
 		m_JobPool.Add(std::move(pJob));
 	}
 };

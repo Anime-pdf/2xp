@@ -5,6 +5,10 @@
 #include <base/system.h>
 #include <engine/storage.h>
 
+#include "spdlog/spdlog.h"
+
+#define FMT "[Storage] "
+
 #define SERVER_EXEC "2xp"
 
 #if defined(CONF_FAMILY_WINDOWS)
@@ -69,7 +73,7 @@ public:
 
 		if(!m_NumPaths)
 		{
-			dbg_msg("storage", "using standard paths");
+			spdlog::info(FMT "Using standard paths");
 			AddDefaultPaths();
 		}
 
@@ -131,7 +135,7 @@ public:
 
 			if(Pos >= MAX_PATH_LENGTH || !File)
 			{
-				dbg_msg("storage", "couldn't open storage.cfg");
+				spdlog::info(FMT "Couldn't open storage.cfg");
 				return;
 			}
 		}
@@ -152,7 +156,7 @@ public:
 		io_close(File);
 
 		if(!m_NumPaths)
-			dbg_msg("storage", "no paths found in storage.cfg");
+			spdlog::info(FMT "No paths found in storage.cfg");
 	}
 
 	void AddDefaultPaths()
@@ -172,7 +176,7 @@ public:
 			if(m_aUserdir[0])
 			{
 				str_copy(m_aaStoragePaths[m_NumPaths++], m_aUserdir, MAX_PATH_LENGTH);
-				dbg_msg("storage", "added path '$USERDIR' ('%s')", m_aUserdir);
+				spdlog::info(FMT "Added path '$USERDIR' ('{}')", m_aUserdir);
 			}
 		}
 		else if(!str_comp(pPath, "$DATADIR"))
@@ -180,20 +184,20 @@ public:
 			if(m_aDatadir[0])
 			{
 				str_copy(m_aaStoragePaths[m_NumPaths++], m_aDatadir, MAX_PATH_LENGTH);
-				dbg_msg("storage", "added path '$DATADIR' ('%s')", m_aDatadir);
+				spdlog::info(FMT "Added path '$DATADIR' ('{}')", m_aDatadir);
 			}
 		}
 		else if(!str_comp(pPath, "$CURRENTDIR"))
 		{
 			m_aaStoragePaths[m_NumPaths++][0] = 0;
-			dbg_msg("storage", "added path '$CURRENTDIR' ('%s')", m_aCurrentdir);
+			spdlog::info(FMT "Sdded path '$CURRENTDIR' ('{}')", m_aCurrentdir);
 		}
 		else
 		{
 			if(fs_is_dir(pPath))
 			{
 				str_copy(m_aaStoragePaths[m_NumPaths++], pPath, MAX_PATH_LENGTH);
-				dbg_msg("storage", "added path '%s'", pPath);
+				spdlog::info(FMT "Added path '{}'", pPath);
 			}
 		}
 	}
@@ -270,7 +274,7 @@ public:
 		}
 #endif
 
-		dbg_msg("storage", "warning: no data directory found");
+		spdlog::warn(FMT "No data directory found");
 	}
 
 	void FindBinarydir(const char *pArgv0)
@@ -501,7 +505,7 @@ public:
 
 		bool Success = !fs_remove(aBuffer);
 		if(!Success)
-			dbg_msg("storage", "failed to remove: %s", aBuffer);
+			spdlog::error(FMT "Failed to remove: {}", aBuffer);
 		return Success;
 	}
 
@@ -512,7 +516,7 @@ public:
 
 		bool Success = !fs_remove(aBuffer);
 		if(!Success)
-			dbg_msg("storage", "failed to remove binary: %s", aBuffer);
+			spdlog::error(FMT "Failed to remove binary: {}", aBuffer);
 		return Success;
 	}
 
@@ -528,7 +532,7 @@ public:
 
 		bool Success = !fs_rename(aOldBuffer, aNewBuffer);
 		if(!Success)
-			dbg_msg("storage", "failed to rename: %s -> %s", aOldBuffer, aNewBuffer);
+			spdlog::error(FMT "Failed to rename: {} -> {}", aOldBuffer, aNewBuffer);
 		return Success;
 	}
 
@@ -540,11 +544,11 @@ public:
 		GetBinaryPath(pNewFilename, aNewBuffer, sizeof(aNewBuffer));
 
 		if(fs_makedir_rec_for(aNewBuffer) < 0)
-			dbg_msg("storage", "cannot create folder for: %s", aNewBuffer);
+			spdlog::error(FMT "Can't create folder for: {}", aNewBuffer);
 
 		bool Success = !fs_rename(aOldBuffer, aNewBuffer);
 		if(!Success)
-			dbg_msg("storage", "failed to rename: %s -> %s", aOldBuffer, aNewBuffer);
+			spdlog::error(FMT "Failed to rename: {} -> {}", aOldBuffer, aNewBuffer);
 		return Success;
 	}
 
@@ -558,7 +562,7 @@ public:
 
 		bool Success = !fs_makedir(aBuffer);
 		if(!Success)
-			dbg_msg("storage", "failed to create folder: %s", aBuffer);
+			spdlog::error(FMT "Failed to create folder: {}", aBuffer);
 		return Success;
 	}
 
@@ -585,7 +589,7 @@ public:
 		CStorage *p = new CStorage();
 		if(p && p->Init(pApplicationName, StorageType, NumArgs, ppArguments))
 		{
-			dbg_msg("storage", "initialisation failed");
+			spdlog::error(FMT "Initialisation failed");
 			delete p;
 			p = 0;
 		}

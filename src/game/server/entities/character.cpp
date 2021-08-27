@@ -25,6 +25,8 @@ CCharacter::CCharacter(CGameWorld *pWorld) :
 	m_Health = 0;
 	m_Armor = 0;
 
+	m_Alive = false;
+
 	// never intilize both to zero
 	m_Input.m_TargetX = 0;
 	m_Input.m_TargetY = -1;
@@ -843,30 +845,34 @@ bool CCharacter::IncreaseArmor(int Amount)
 
 void CCharacter::Die(int Killer, int Weapon)
 {
-	if(!IsAlive())
-		return;
-	int ModeSpecial = GameServer()->m_pController->OnCharacterDeath(this, GameServer()->m_apPlayers[Killer], Weapon);
+	//// ------- LOL move this to Logger->OnCharacterDeath
+	//int ModeSpecial = GameServer()->m_pController->OnCharacterDeath(this, GameServer()->m_apPlayers[Killer], Weapon);
 
-	char aBuf[256];
-	str_format(aBuf, sizeof(aBuf), "kill killer='%d:%s' victim='%d:%s' weapon=%d special=%d",
-		Killer, Server()->ClientName(Killer),
-		m_pPlayer->GetCID(), Server()->ClientName(m_pPlayer->GetCID()), Weapon, ModeSpecial);
-	GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", aBuf);
+	//char aBuf[256];
+	//str_format(aBuf, sizeof(aBuf), "kill killer='%d:%s' victim='%d:%s' weapon=%d special=%d",
+	//	Killer, Server()->ClientName(Killer),
+	//	m_pPlayer->GetCID(), Server()->ClientName(m_pPlayer->GetCID()), Weapon, ModeSpecial);
+	//GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", aBuf);
+	// -------
 
+	// ------- LOL move this to GameServer->OnCharacterDeath
 	// send the kill message
 	CNetMsg_Sv_KillMsg Msg;
 	Msg.m_Killer = Killer;
 	Msg.m_Victim = m_pPlayer->GetCID();
 	Msg.m_Weapon = Weapon;
-	Msg.m_ModeSpecial = ModeSpecial;
+	Msg.m_ModeSpecial = 0/*ModeSpecial*/;
 	Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, -1);
 
 	// a nice sound
 	GameServer()->CreateSound(m_Pos, SOUND_PLAYER_DIE);
+	// -------
 
+	// ------- LOL move this to Player->OnCharacterDeath
 	// this is to rate limit respawning to 3 secs
 	m_pPlayer->m_PreviousDieTick = m_pPlayer->m_DieTick;
 	m_pPlayer->m_DieTick = Server()->Tick();
+	// -------
 
 	m_Alive = false;
 

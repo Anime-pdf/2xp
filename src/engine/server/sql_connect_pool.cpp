@@ -8,6 +8,10 @@
 #include <engine/shared/config.h>
 #include "sql_connect_pool.h"
 
+#include "spdlog/spdlog.h"
+
+#define FMT "[SQL] "
+
 /*
 	And in General, you should review the SQL system, 
 	it works (and has been tested by time and tests), 
@@ -49,7 +53,7 @@ CConnectionPool::CConnectionPool()
 	}
 	catch(SQLException &e) 
 	{ 
-		dbg_msg("sql", "%s", e.what());
+		spdlog::error(FMT "{}", e.what());
 		exit(0);
 	}
 }
@@ -79,7 +83,7 @@ Connection* CConnectionPool::CreateConnection()
 		}
 		catch(SQLException &e) 
 		{
-			dbg_msg("sql", "%s", e.what());
+			spdlog::error(FMT "{}", e.what());
 			DisconnectConnection(pConnection);
 		}
 	}
@@ -135,7 +139,7 @@ void CConnectionPool::DisconnectConnection(Connection* pConnection)
 		}
 		catch(SQLException& e)
 		{
-			dbg_msg("sql", "%s", e.what());
+			spdlog::error(FMT "{}", e.what());
 		}
 	}
 	m_ConnList.remove(pConnection);
@@ -209,7 +213,7 @@ void CConnectionPool::InsertFormated(int Milliseconds, const char *Table, const 
 		SqlThreadRecursiveLock.unlock();
 
 		if(pError != nullptr)
-			dbg_msg("sql", "%s", pError);
+			spdlog::error(FMT "{}", pError);
 	});
 	Thread.detach();
 }
@@ -268,7 +272,7 @@ void CConnectionPool::UpdateFormated(int Milliseconds, const char *Table, const 
 		SqlThreadRecursiveLock.unlock();
 
 		if(pError != nullptr)
-			dbg_msg("sql", "%s", pError);
+			spdlog::error(FMT "{}", pError);
 	});
 	Thread.detach();
 }
@@ -327,7 +331,7 @@ void CConnectionPool::DeleteFormated(int Milliseconds, const char *Table, const 
 		SqlThreadRecursiveLock.unlock();
 
 		if(pError != nullptr)
-			dbg_msg("sql", "%s", pError);
+			spdlog::error(FMT "{}", pError);
 	});
 	Thread.detach();
 }
@@ -378,7 +382,7 @@ ResultPtr CConnectionPool::SSD(const char* Select, const char* Table, const char
 	SqlThreadRecursiveLock.unlock();
 
 	if(pError != nullptr)
-		dbg_msg("sql", "%s", pError);
+		spdlog::error(FMT "{}", pError);
 
 	return pResult;
 }
@@ -418,7 +422,7 @@ void CConnectionPool::ASD(std::function<void(ResultPtr)> func, const char *Selec
 		SqlThreadRecursiveLock.unlock();
 
 		if(pError != nullptr)
-			dbg_msg("sql", "%s", pError);
+			spdlog::error(FMT "{}", pError);
 	});
 	Thread.detach();
 }
@@ -460,7 +464,7 @@ void CConnectionPool::ASDS(int Milliseconds, std::function<void(ResultPtr)> func
 		SqlThreadRecursiveLock.unlock();
 
 		if(pError != nullptr)
-			dbg_msg("sql", "%s", pError);
+			spdlog::error(FMT "{}", pError);
 	});
 	Thread.detach();
 }
@@ -540,5 +544,5 @@ void CConnectionPool::SPS(const char* T, SqlArgs A)
 	SqlThreadRecursiveLock.unlock();
 
 	if(pError != nullptr)
-		dbg_msg("sql", "%s", pError);
+		spdlog::error(FMT "{}", pError);
 }

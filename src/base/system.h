@@ -27,36 +27,12 @@
 #include <sys/socket.h>
 #endif
 
+#ifdef CONF_DEBUG
+#define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_DEBUG
+#endif
+
 #ifdef __cplusplus
 extern "C" {
-#endif
-
-/* Group: Debug */
-/*
-	Function: dbg_assert
-		Breaks into the debugger based on a test.
-
-	Parameters:
-		test - Result of the test.
-		msg - Message that should be printed if the test fails.
-
-	Remarks:
-		Does nothing in release version
-
-	See Also:
-		<dbg_break>
-*/
-#ifdef CONF_DEBUG
-#define dbg_assert(test, msg) dbg_assert_imp(__FILE__, __LINE__, test, msg)
-#else
-#define dbg_assert(test, msg)
-#endif
-void dbg_assert_imp(const char *filename, int line, int test, const char *msg);
-
-#ifdef __clang_analyzer__
-#include <assert.h>
-#undef dbg_assert
-#define dbg_assert(test, msg) assert(test)
 #endif
 
 #ifdef __GNUC__
@@ -64,41 +40,6 @@ void dbg_assert_imp(const char *filename, int line, int test, const char *msg);
 #else
 #define GNUC_ATTRIBUTE(x)
 #endif
-
-/*
-	Function: dbg_break
-		Breaks into the debugger.
-
-	Remarks:
-		Does nothing in release version
-
-	See Also:
-		<dbg_assert>
-*/
-#ifdef CONF_DEBUG
-#define dbg_break() dbg_break_imp()
-#else
-#define dbg_break()
-#endif
-void dbg_break_imp(void);
-
-/*
-	Function: dbg_msg
-
-	Prints a debug message.
-
-	Parameters:
-		sys - A string that describes what system the message belongs to
-		fmt - A printf styled format string.
-
-	Remarks:
-		Also works in release version
-
-	See Also:
-		<dbg_assert>
-*/
-void dbg_msg(const char *sys, const char *fmt, ...)
-	GNUC_ATTRIBUTE((format(printf, 2, 3)));
 
 /* Group: Memory */
 
@@ -715,11 +656,11 @@ enum
 int time_season(void);
 
 /*
-Function: time_get_microseconds
-Fetches a sample from a high resolution timer and converts it in microseconds.
+	Function: time_get_microseconds
+		Fetches a sample from a high resolution timer and converts it in microseconds.
 
-Returns:
-Current value of the timer in microseconds.
+	Returns:
+		Current value of the timer in microseconds.
 */
 int64 time_get_microseconds(void);
 
@@ -1834,14 +1775,6 @@ int net_socket_read_wait(NETSOCKET sock, int time);
 int open_link(const char *link);
 
 void swap_endian(void *data, unsigned elem_size, unsigned num);
-
-typedef void (*DBG_LOGGER)(const char *line, void *user);
-typedef void (*DBG_LOGGER_FINISH)(void *user);
-void dbg_logger(DBG_LOGGER logger, DBG_LOGGER_FINISH finish, void *user);
-
-void dbg_logger_stdout(void);
-void dbg_logger_debugger(void);
-void dbg_logger_file(const char *filename);
 
 typedef struct
 {

@@ -5,6 +5,10 @@
 #include <engine/shared/protocol.h>
 #include <engine/storage.h>
 
+#include "spdlog/spdlog.h"
+
+#define FMT "[Config] "
+
 CConfig g_Config;
 
 void EscapeParam(char *pDst, const char *pSrc, int Size)
@@ -51,7 +55,7 @@ bool CConfigManager::Save()
 
 	if(!m_ConfigFile)
 	{
-		dbg_msg("config", "ERROR: opening %s failed", aConfigFileTmp);
+		spdlog::error(FMT "Opening of {} failed", aConfigFileTmp);
 		return false;
 	}
 
@@ -96,13 +100,13 @@ bool CConfigManager::Save()
 
 	if(m_Failed)
 	{
-		dbg_msg("config", "ERROR: writing to %s failed", aConfigFileTmp);
+		spdlog::error(FMT "Writing to {} failed", aConfigFileTmp);
 		return false;
 	}
 
 	if(!m_pStorage->RenameFile(aConfigFileTmp, CONFIG_FILE, IStorage::TYPE_SAVE))
 	{
-		dbg_msg("config", "ERROR: renaming %s to " CONFIG_FILE " failed", aConfigFileTmp);
+		spdlog::error(FMT "Renaming {} to {} failed", CONFIG_FILE, aConfigFileTmp);
 		return false;
 	}
 
@@ -111,7 +115,11 @@ bool CConfigManager::Save()
 
 void CConfigManager::RegisterCallback(SAVECALLBACKFUNC pfnFunc, void *pUserData)
 {
-	dbg_assert(m_NumCallbacks < MAX_CALLBACKS, "too many config callbacks");
+	if(m_NumCallbacks >= MAX_CALLBACKS)
+	{
+		spdlog::error(FMT "Too many config callbacks");
+		return;
+	}
 	m_aCallbacks[m_NumCallbacks].m_pfnFunc = pfnFunc;
 	m_aCallbacks[m_NumCallbacks].m_pUserData = pUserData;
 	m_NumCallbacks++;

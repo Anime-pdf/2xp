@@ -11,6 +11,10 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "spdlog/spdlog.h"
+
+#define FMT "[FIFO] "
+
 void CFifo::Init(IConsole *pConsole, char *pFifoFile, int Flag)
 {
 	m_File = -1;
@@ -29,21 +33,21 @@ void CFifo::Init(IConsole *pConsole, char *pFifoFile, int Flag)
 
 	if(!S_ISFIFO(Attribute.st_mode))
 	{
-		dbg_msg("fifo", "'%s' is not a fifo, removing", m_aFilename);
+		spdlog::warn(FMT "{} is not a fifo, removing", m_aFilename);
 		fs_remove(m_aFilename);
 		mkfifo(m_aFilename, 0600);
 		stat(m_aFilename, &Attribute);
 
 		if(!S_ISFIFO(Attribute.st_mode))
 		{
-			dbg_msg("fifo", "can't remove file '%s', quitting", m_aFilename);
+			spdlog::warn(FMT "Can't remove file {}, quitting", m_aFilename);
 			exit(2);
 		}
 	}
 
 	m_File = open(m_aFilename, O_RDONLY | O_NONBLOCK);
 	if(m_File < 0)
-		dbg_msg("fifo", "can't open file '%s'", m_aFilename);
+		spdlog::warn(FMT "Can't open file {}", m_aFilename);
 }
 
 void CFifo::Shutdown()

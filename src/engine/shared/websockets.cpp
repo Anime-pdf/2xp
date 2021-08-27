@@ -92,9 +92,9 @@ static int websocket_callback(struct lws *wsi, enum lws_callback_reasons reason,
 		char addr_str[NETADDR_MAXSTRSIZE];
 		int ip_uint32 = pss->addr.sin_addr.s_addr;
 		str_format(addr_str, sizeof(addr_str), "%d.%d.%d.%d", (ip_uint32)&0xff, (ip_uint32 >> 8) & 0xff, (ip_uint32 >> 16) & 0xff, (ip_uint32 >> 24) & 0xff);
-		dbg_msg("websockets",
-			"connection established with %s:%d",
-			addr_str, orig_port);
+		//dbg_msg("websockets",
+		//	"connection established with %s:%d",
+		//	addr_str, orig_port);
 		char buf[100];
 		snprintf(buf, sizeof(buf), "%s:%d", addr_str, orig_port);
 		pss->addr_str = std::string(buf);
@@ -104,7 +104,7 @@ static int websocket_callback(struct lws *wsi, enum lws_callback_reasons reason,
 
 	case LWS_CALLBACK_CLOSED:
 	{
-		dbg_msg("websockets", "connection with addr string %s closed", pss->addr_str.c_str());
+		//dbg_msg("websockets", "connection with addr string %s closed", pss->addr_str.c_str());
 		if(!pss->addr_str.empty())
 		{
 			unsigned char close_packet[] = {0x10, 0x0e, 0x00, 0x04};

@@ -3,6 +3,8 @@
 #ifndef BASE_TL_SORTED_ARRAY_H
 #define BASE_TL_SORTED_ARRAY_H
 
+#include "spdlog/spdlog.h"
+
 #include "base/tl/algorithm.h"
 #include "base/tl/array.h"
 
@@ -14,12 +16,12 @@ class sorted_array : public array<T, ALLOCATOR>
 	// insert and size is not allowed
 	int insert(const T &item, typename parent::range r)
 	{
-		dbg_break();
+		spdlog::error("[Sorted Array] Insert operation isn't allowed by design");
 		return 0;
 	}
 	int set_size(int new_size)
 	{
-		dbg_break();
+		spdlog::error("[Sorted Array] Size setting operation isn't allowed by design");
 		return 0;
 	}
 

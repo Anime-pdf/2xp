@@ -1,6 +1,10 @@
 #include <base/system.h>
 #include <engine/shared/json.h>
 
+#include "spdlog/spdlog.h"
+
+#define FMT "[JSON] "
+
 const struct _json_value *json_object_get(const json_value *object, const char *index)
 {
 	unsigned int i;
@@ -60,7 +64,11 @@ static char EscapeJsonChar(char c)
 
 char *EscapeJson(char *pBuffer, int BufferSize, const char *pString)
 {
-	dbg_assert(BufferSize > 0, "can't null-terminate the string");
+	if(BufferSize <= 0)
+	{
+		spdlog::error(FMT "Can't null-terminate the string");
+		return 0;
+	}
 	// Subtract the space for null termination early.
 	BufferSize--;
 
@@ -104,12 +112,5 @@ char *EscapeJson(char *pBuffer, int BufferSize, const char *pString)
 
 const char *JsonBool(bool Bool)
 {
-	if(Bool)
-	{
-		return "true";
-	}
-	else
-	{
-		return "false";
-	}
+	return Bool ? "true" : "false";
 }

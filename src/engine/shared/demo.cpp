@@ -20,6 +20,10 @@
 #include "network.h"
 #include "snapshot.h"
 
+#include "spdlog/spdlog.h"
+
+#define FMT "[Demo] "
+
 static const unsigned char s_aHeaderMarker[7] = {'T', 'W', 'D', 'E', 'M', 'O', 0};
 static const unsigned char s_CurVersion = 6;
 static const unsigned char s_OldVersion = 3;
@@ -753,7 +757,7 @@ int CDemoPlayer::Load(class IStorage *pStorage, class IConsole *pConsole, const 
 		else
 		{
 			// This hopes whatever happened during the version increment didn't add something here
-			dbg_msg("demo", "demo version incremented");
+			spdlog::info(FMT "Version incremented");
 			io_seek(m_File, -(int)sizeof(ExtensionUuid.m_aData), IOSEEK_CUR);
 		}
 	}
@@ -1078,7 +1082,7 @@ bool CDemoPlayer::GetDemoInfo(class IStorage *pStorage, const char *pFilename, i
 		else
 		{
 			// This hopes whatever happened during the version increment didn't add something here
-			dbg_msg("demo", "demo version incremented, but not by ddnet");
+			spdlog::info(FMT "Version incremented, but not by this app");
 			io_seek(File, -(int)sizeof(ExtensionUuid.m_aData), IOSEEK_CUR);
 		}
 	}

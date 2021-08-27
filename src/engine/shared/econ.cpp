@@ -4,6 +4,10 @@
 #include "econ.h"
 #include "netban.h"
 
+#include "spdlog/spdlog.h"
+
+#define FMT "[Econ] "
+
 int CEcon::NewClientCallback(int ClientID, void *pUser)
 {
 	CEcon *pThis = (CEcon *)pUser;
@@ -116,8 +120,12 @@ void CEcon::Update()
 
 	while(m_NetConsole.Recv(aBuf, (int)(sizeof(aBuf)) - 1, &ClientID))
 	{
-		dbg_assert(m_aClients[ClientID].m_State != CClient::STATE_EMPTY, "got message from empty slot");
-		if(m_aClients[ClientID].m_State == CClient::STATE_CONNECTED)
+		if(m_aClients[ClientID].m_State == CClient::STATE_EMPTY)
+		{
+			spdlog::warn(FMT "Got message from empty slot");
+			return;
+		}
+		else if(m_aClients[ClientID].m_State == CClient::STATE_CONNECTED)
 		{
 			if(str_comp(aBuf, g_Config.m_EcPassword) == 0)
 			{
@@ -157,7 +165,7 @@ void CEcon::Update()
 	{
 		if(m_aClients[i].m_State == CClient::STATE_CONNECTED &&
 			time_get() > m_aClients[i].m_TimeConnected + g_Config.m_EcAuthTimeout * time_freq())
-			m_NetConsole.Drop(i, "authentication timeout");
+			m_NetConsole.Drop(i, "Authentication timeout");
 	}
 }
 

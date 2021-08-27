@@ -142,7 +142,8 @@ public:
 	template<class T>
 	int SendPackMsgOne(T *pMsg, int Flags, int ClientID)
 	{
-		dbg_assert(ClientID != -1, "SendPackMsgOne called with -1");
+		if(ClientID == -1)
+			spdlog::error("SendPackMsgOne called with -1");
 		CMsgPacker Packer(pMsg->MsgID(), false, protocol7::is_sixup<T>::value);
 
 		if(pMsg->Pack(&Packer))

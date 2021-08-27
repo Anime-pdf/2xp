@@ -11,6 +11,8 @@
 #include <engine/shared/config.h>
 #include <utility>
 
+#define FMT "[World] "
+
 //////////////////////////////////////////////////
 // game world
 //////////////////////////////////////////////////
@@ -71,7 +73,8 @@ void CGameWorld::InsertEntity(CEntity *pEnt)
 {
 #ifdef CONF_DEBUG
 	for(CEntity *pCur = m_apFirstEntityTypes[pEnt->m_ObjType]; pCur; pCur = pCur->m_pNextTypeEntity)
-		dbg_assert(pCur != pEnt, "err");
+		if(pCur == pEnt)
+			spdlog::critical(FMT "Entity is already in list");
 #endif
 
 	// insert it
@@ -168,7 +171,7 @@ void CGameWorld::UpdatePlayerMaps()
 		int *pMap = Server()->GetIdMap(i);
 
 		CPlayer *pFirstPlayer = GameServer()->GetPlayer(i);
-		CCharacter *pFirstCharacter = (CCharacter *)pFirstPlayer;
+		CCharacter *pFirstCharacter = GameServer()->GetCharacter(i);
 
 		// compute distances
 		for(int j = 0; j < MAX_CLIENTS; j++)
@@ -176,19 +179,19 @@ void CGameWorld::UpdatePlayerMaps()
 			Dist[j].second = j;
 
 			CPlayer *pSecondPlayer = GameServer()->GetPlayer(j);
-			CCharacter *pSecondCharacter = (CCharacter *)pSecondPlayer;
+			CCharacter *pSecondCharacter = GameServer()->GetCharacter(j);
 
 			if(!Server()->ClientIngame(j) || !pSecondPlayer)
 			{
 				Dist[j].first = 1e10;
 				continue;
 			}
-			if(!pSecondCharacter)
+			else if(!pSecondCharacter)
 			{
 				Dist[j].first = 1e9;
 				continue;
 			}
-			if(pFirstCharacter &&
+			else if(pFirstCharacter &&
 				!pFirstPlayer->Spectator() &&
 				(!pFirstPlayer ||
 					pFirstPlayer->GetClientVersion() == VERSION_VANILLA ||

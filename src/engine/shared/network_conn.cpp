@@ -4,6 +4,10 @@
 #include "network.h"
 #include <base/system.h>
 
+#include "spdlog/spdlog.h"
+
+#define FMT "[Network] "
+
 SECURITY_TOKEN ToSecurityToken(unsigned char *pData)
 {
 	return (int)pData[0] | (pData[1] << 8) | (pData[2] << 16) | (pData[3] << 24);
@@ -250,8 +254,7 @@ int CNetConnection::Feed(CNetPacketConstruct *pPacket, NETADDR *pAddr, SECURITY_
 		pPacket->m_DataSize -= sizeof(m_SecurityToken);
 		if(m_SecurityToken != ToSecurityToken(&pPacket->m_aChunkData[pPacket->m_DataSize]))
 		{
-			if(g_Config.m_Debug)
-				dbg_msg("security", "token mismatch, expected %d got %d", m_SecurityToken, ToSecurityToken(&pPacket->m_aChunkData[pPacket->m_DataSize]));
+			spdlog::debug(FMT "Token mismatch. Expected {} instead of {}", m_SecurityToken, ToSecurityToken(&pPacket->m_aChunkData[pPacket->m_DataSize]));
 			return 0;
 		}
 	}
@@ -305,7 +308,7 @@ int CNetConnection::Feed(CNetPacketConstruct *pPacket, NETADDR *pAddr, SECURITY_
 				}
 
 				if(g_Config.m_Debug)
-					dbg_msg("conn", "closed reason='%s'", aStr);
+					spdlog::debug(FMT "Closed: {}", aStr);
 			}
 			return 0;
 		}
@@ -329,18 +332,15 @@ int CNetConnection::Feed(CNetPacketConstruct *pPacket, NETADDR *pAddr, SECURITY_
 					if(m_SecurityToken == NET_SECURITY_TOKEN_UNKNOWN && pPacket->m_DataSize >= (int)(1 + sizeof(SECURITY_TOKEN_MAGIC) + sizeof(m_SecurityToken)) && !mem_comp(&pPacket->m_aChunkData[1], SECURITY_TOKEN_MAGIC, sizeof(SECURITY_TOKEN_MAGIC)))
 					{
 						m_SecurityToken = NET_SECURITY_TOKEN_UNSUPPORTED;
-						if(g_Config.m_Debug)
-							dbg_msg("security", "generated token %d", m_SecurityToken);
+						spdlog::debug(FMT "Generated token: {}", m_SecurityToken);
 					}
 					else
 					{
-						if(g_Config.m_Debug)
-							dbg_msg("security", "token not supported by client (packet size %d)", pPacket->m_DataSize);
+						spdlog::debug(FMT "Token not supported by client (packet size: {})", pPacket->m_DataSize);
 						m_SecurityToken = NET_SECURITY_TOKEN_UNSUPPORTED;
 					}
 					SendControl(NET_CTRLMSG_CONNECTACCEPT, SECURITY_TOKEN_MAGIC, sizeof(SECURITY_TOKEN_MAGIC));
-					if(g_Config.m_Debug)
-						dbg_msg("connection", "got connection, sending connect+accept");
+					spdlog::debug(FMT "Got connection. Sending connect + accept");
 				}
 			}
 			else if(State() == NET_CONNSTATE_CONNECT)
@@ -351,20 +351,17 @@ int CNetConnection::Feed(CNetPacketConstruct *pPacket, NETADDR *pAddr, SECURITY_
 					if(m_SecurityToken == NET_SECURITY_TOKEN_UNKNOWN && pPacket->m_DataSize >= (int)(1 + sizeof(SECURITY_TOKEN_MAGIC) + sizeof(m_SecurityToken)) && !mem_comp(&pPacket->m_aChunkData[1], SECURITY_TOKEN_MAGIC, sizeof(SECURITY_TOKEN_MAGIC)))
 					{
 						m_SecurityToken = ToSecurityToken(&pPacket->m_aChunkData[1 + sizeof(SECURITY_TOKEN_MAGIC)]);
-						if(g_Config.m_Debug)
-							dbg_msg("security", "got token %d", m_SecurityToken);
+						spdlog::debug(FMT "Got token: {}", m_SecurityToken);
 					}
 					else
 					{
 						m_SecurityToken = NET_SECURITY_TOKEN_UNSUPPORTED;
-						if(g_Config.m_Debug)
-							dbg_msg("security", "token not supported by server");
+						spdlog::debug(FMT "Token not supported by server");
 					}
 					m_LastRecvTime = Now;
 					SendControl(NET_CTRLMSG_ACCEPT, 0, 0);
 					m_State = NET_CONNSTATE_ONLINE;
-					if(g_Config.m_Debug)
-						dbg_msg("connection", "got connect+accept, sending accept. connection online");
+					spdlog::debug(FMT "Got connect + accept. Sending accept. Connection online");
 				}
 			}
 		}
@@ -375,8 +372,7 @@ int CNetConnection::Feed(CNetPacketConstruct *pPacket, NETADDR *pAddr, SECURITY_
 		{
 			m_LastRecvTime = Now;
 			m_State = NET_CONNSTATE_ONLINE;
-			if(g_Config.m_Debug)
-				dbg_msg("connection", "connecting online");
+			spdlog::debug(FMT "Connecting online");
 		}
 	}
 
@@ -424,8 +420,8 @@ int CNetConnection::Update()
 		if(time_get() - m_LastSendTime > time_freq() / 2) // flush connection after 500ms if needed
 		{
 			int NumFlushedChunks = Flush();
-			if(NumFlushedChunks && g_Config.m_Debug)
-				dbg_msg("connection", "flushed connection due to timeout. %d chunks.", NumFlushedChunks);
+			if(NumFlushedChunks)
+				spdlog::debug(FMT "Flushed connection due to timeout. {} chunks.", NumFlushedChunks);
 		}
 
 		if(time_get() - m_LastSendTime > time_freq())

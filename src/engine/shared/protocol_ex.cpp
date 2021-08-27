@@ -80,7 +80,6 @@ int UnpackMessageID(int *pID, bool *pSys, struct CUuid *pUuid, CUnpacker *pUnpac
 					break;
 				char aBuf[UUID_MAXSTRSIZE];
 				FormatUuid(Uuid2, aBuf, sizeof(aBuf));
-				dbg_msg("uuid", "peer: unknown %s", aBuf);
 			}
 			break;
 		case NETMSG_ITIS:
@@ -93,7 +92,6 @@ int UnpackMessageID(int *pID, bool *pSys, struct CUuid *pUuid, CUnpacker *pUnpac
 					break;
 				char aBuf[UUID_MAXSTRSIZE];
 				FormatUuid(Uuid2, aBuf, sizeof(aBuf));
-				dbg_msg("uuid", "peer: %s %s", aBuf, pName);
 			}
 			break;
 		}

@@ -6,6 +6,10 @@
 #include "huffman.h"
 #include "network.h"
 
+#include "spdlog//spdlog.h"
+
+#define FMT "[Network] "
+
 void CNetRecvUnpacker::Clear()
 {
 	m_Valid = false;
@@ -72,8 +76,7 @@ int CNetRecvUnpacker::FetchChunk(CNetChunk *pChunk)
 					continue;
 
 				// out of sequence, request resend
-				if(g_Config.m_Debug)
-					dbg_msg("conn", "asking for resend %d %d", Header.m_Sequence, (m_pConnection->m_Ack + 1) % NET_MAX_SEQUENCE);
+				spdlog::debug(FMT "Asking for resend: {} {}", Header.m_Sequence, (m_pConnection->m_Ack + 1) % NET_MAX_SEQUENCE);
 				m_pConnection->SignalResend();
 				continue; // take the next chunk in the packet
 			}
@@ -196,7 +199,6 @@ int CNetBase::UnpackPacket(unsigned char *pBuffer, int Size, CNetPacketConstruct
 	// check the size
 	if(Size < NET_PACKETHEADERSIZE || Size > NET_MAX_PACKETSIZE)
 	{
-		//dbg_msg("", "packet too small, %d", Size);
 		return -1;
 	}
 
@@ -283,8 +285,7 @@ int CNetBase::UnpackPacket(unsigned char *pBuffer, int Size, CNetPacketConstruct
 	// check for errors
 	if(pPacket->m_DataSize < 0)
 	{
-		if(g_Config.m_Debug)
-			dbg_msg("network", "error during packet decoding");
+		spdlog::error(FMT "Error during packet decoding");
 		return -1;
 	}
 
@@ -371,32 +372,32 @@ void CNetBase::OpenLog(IOHANDLE DataLogSent, IOHANDLE DataLogRecv)
 	if(DataLogSent)
 	{
 		ms_DataLogSent = DataLogSent;
-		dbg_msg("network", "logging sent packages");
+		spdlog::info(FMT "Logging sent packages");
 	}
 	else
-		dbg_msg("network", "failed to start logging sent packages");
+		spdlog::error(FMT "Failed to start logging sent packages");
 
 	if(DataLogRecv)
 	{
 		ms_DataLogRecv = DataLogRecv;
-		dbg_msg("network", "logging recv packages");
+		spdlog::info(FMT "Logging recv packages");
 	}
 	else
-		dbg_msg("network", "failed to start logging recv packages");
+		spdlog::error(FMT "Failed to start logging recv packages");
 }
 
 void CNetBase::CloseLog()
 {
 	if(ms_DataLogSent)
 	{
-		dbg_msg("network", "stopped logging sent packages");
+		spdlog::info(FMT "Stopped logging sent packages");
 		io_close(ms_DataLogSent);
 		ms_DataLogSent = 0;
 	}
 
 	if(ms_DataLogRecv)
 	{
-		dbg_msg("network", "stopped logging recv packages");
+		spdlog::info(FMT "Stopped logging recv packages");
 		io_close(ms_DataLogRecv);
 		ms_DataLogRecv = 0;
 	}

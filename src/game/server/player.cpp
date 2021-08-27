@@ -21,7 +21,7 @@ CPlayer::CPlayer(CGameContext *pGameServer, int ClientID, int Team)
 	m_Team = Team;
 	m_Spectator = true;
 
-	m_pCharacter = new(m_ClientID) CCharacter(&pGameServer->m_World);
+	m_pCharacter = new(m_ClientID) CCharacter(&GameServer()->m_World);
 
 	Reset();
 	GameServer()->Antibot()->OnPlayerInit(m_ClientID);
@@ -38,7 +38,6 @@ void CPlayer::Reset()
 {
 	m_DieTick = Server()->Tick();
 	m_PreviousDieTick = m_DieTick;
-	m_pCharacter->Die(m_ClientID, WEAPON_GAME);
 	m_SpectatorID = SPEC_FREEVIEW;
 
 	m_pAccount = 0;
@@ -427,7 +426,8 @@ void CPlayer::SetTeam(int Team)
 
 void CPlayer::TryRespawn()
 {
-	m_pCharacter->Die(m_ClientID, WEAPON_GAME);
+	if(IsPlaying())
+		m_pCharacter->Die(m_ClientID, WEAPON_GAME);
 
 	vec2 SpawnPos;
 	if(!GameServer()->m_pController->CanSpawn(m_Team, &SpawnPos))
@@ -442,9 +442,7 @@ void CPlayer::TryRespawn()
 
 bool CPlayer::IsPlaying()
 {
-	if(m_pCharacter->IsAlive())
-		return true;
-	return false;
+	return m_pCharacter->IsAlive();
 }
 
 void CPlayer::SpectatePlayerName(const char *pName)

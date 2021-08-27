@@ -5,6 +5,10 @@
 #include <engine/shared/snapshot.h>
 #include <game/gamecore.h>
 
+#include "spdlog/spdlog.h"
+
+#define FMT "[Teehistorian] "
+
 static const char TEEHISTORIAN_NAME[] = "teehistorian@ddnet.tw";
 static const CUuid TEEHISTORIAN_UUID = CalculateUuid(TEEHISTORIAN_NAME);
 static const char TEEHISTORIAN_VERSION[] = "2";
@@ -38,7 +42,11 @@ CTeeHistorian::CTeeHistorian()
 
 void CTeeHistorian::Reset(const CGameInfo *pGameInfo, WRITE_CALLBACK pfnWriteCallback, void *pUser)
 {
-	dbg_assert(m_State == STATE_START || m_State == STATE_BEFORE_TICK, "invalid teehistorian state");
+	if(m_State != STATE_START && m_State != STATE_BEFORE_TICK)
+	{
+		spdlog::error(FMT "Invalid state: {}", m_State);
+		return;
+	}
 
 	m_Debug = 0;
 
@@ -186,14 +194,18 @@ void CTeeHistorian::WriteExtra(CUuid Uuid, const void *pData, int DataSize)
 
 void CTeeHistorian::BeginTick(int Tick)
 {
-	dbg_assert(m_State == STATE_START || m_State == STATE_BEFORE_TICK, "invalid teehistorian state");
+	if(m_State != STATE_START && m_State != STATE_BEFORE_TICK)
+	{
+		spdlog::error(FMT "Invalid state: {}", m_State);
+		return;
+	}
 
 	m_Tick = Tick;
 	m_TickWritten = false;
 
 	if(m_Debug > 1)
 	{
-		dbg_msg("teehistorian", "tick %d", Tick);
+		spdlog::debug(FMT "Tick: {}", Tick);
 	}
 
 	m_State = STATE_BEFORE_PLAYERS;
@@ -201,7 +213,11 @@ void CTeeHistorian::BeginTick(int Tick)
 
 void CTeeHistorian::BeginPlayers()
 {
-	dbg_assert(m_State == STATE_BEFORE_PLAYERS, "invalid teehistorian state");
+	if(m_State != STATE_BEFORE_PLAYERS)
+	{
+		spdlog::error(FMT "Invalid state: {}", m_State);
+		return;
+	}
 
 	m_PrevMaxClientID = m_MaxClientID;
 	// ensure that PLAYER_{DIFF, NEW, OLD} don't cause an implicit tick after a TICK_SKIP
@@ -213,7 +229,11 @@ void CTeeHistorian::BeginPlayers()
 
 void CTeeHistorian::EnsureTickWrittenPlayerData(int ClientID)
 {
-	dbg_assert(ClientID > m_MaxClientID, "invalid player data order");
+	if(ClientID <= m_MaxClientID)
+	{
+		spdlog::error(FMT "Invalid player data order: {}", ClientID);
+		return;
+	}
 	m_MaxClientID = ClientID;
 
 	if(!m_TickWritten && (ClientID > m_PrevMaxClientID || m_LastWrittenTick + 1 != m_Tick))
@@ -230,7 +250,11 @@ void CTeeHistorian::EnsureTickWrittenPlayerData(int ClientID)
 
 void CTeeHistorian::RecordPlayer(int ClientID, const CNetObj_CharacterCore *pChar)
 {
-	dbg_assert(m_State == STATE_PLAYERS, "invalid teehistorian state");
+	if(m_State != STATE_PLAYERS)
+	{
+		spdlog::error(FMT "Invalid state: {}", m_State);
+		return;
+	}
 
 	CPlayer *pPrev = &m_aPrevPlayers[ClientID];
 	if(!pPrev->m_Alive || pPrev->m_X != pChar->m_X || pPrev->m_Y != pChar->m_Y)
@@ -248,7 +272,7 @@ void CTeeHistorian::RecordPlayer(int ClientID, const CNetObj_CharacterCore *pCha
 			Buffer.AddInt(dy);
 			if(m_Debug)
 			{
-				dbg_msg("teehistorian", "diff cid=%d dx=%d dy=%d", ClientID, dx, dy);
+				spdlog::debug(FMT "diff cid={} dx={} dy={}", ClientID, dx, dy);
 			}
 		}
 		else
@@ -261,7 +285,7 @@ void CTeeHistorian::RecordPlayer(int ClientID, const CNetObj_CharacterCore *pCha
 			Buffer.AddInt(y);
 			if(m_Debug)
 			{
-				dbg_msg("teehistorian", "new cid=%d x=%d y=%d", ClientID, x, y);
+				spdlog::debug(FMT "new cid={} dx={} dy={}", ClientID, x, y);
 			}
 		}
 		Write(Buffer.Data(), Buffer.Size());
@@ -273,7 +297,11 @@ void CTeeHistorian::RecordPlayer(int ClientID, const CNetObj_CharacterCore *pCha
 
 void CTeeHistorian::RecordDeadPlayer(int ClientID)
 {
-	dbg_assert(m_State == STATE_PLAYERS, "invalid teehistorian state");
+	if(m_State != STATE_PLAYERS)
+	{
+		spdlog::error(FMT "Invalid state: {}", m_State);
+		return;
+	}
 
 	CPlayer *pPrev = &m_aPrevPlayers[ClientID];
 	if(pPrev->m_Alive)
@@ -286,7 +314,7 @@ void CTeeHistorian::RecordDeadPlayer(int ClientID)
 		Buffer.AddInt(ClientID);
 		if(m_Debug)
 		{
-			dbg_msg("teehistorian", "old cid=%d", ClientID);
+			spdlog::debug(FMT "old cid={}", ClientID);
 		}
 		Write(Buffer.Data(), Buffer.Size());
 	}
@@ -316,7 +344,7 @@ void CTeeHistorian::WriteTick()
 	TickPacker.AddInt(dt);
 	if(m_Debug)
 	{
-		dbg_msg("teehistorian", "skip_ticks dt=%d", dt);
+		spdlog::debug(FMT "skip_ticks dt={}", dt);
 	}
 	Write(TickPacker.Data(), TickPacker.Size());
 
@@ -326,14 +354,22 @@ void CTeeHistorian::WriteTick()
 
 void CTeeHistorian::EndPlayers()
 {
-	dbg_assert(m_State == STATE_PLAYERS, "invalid teehistorian state");
+	if(m_State != STATE_PLAYERS)
+	{
+		spdlog::error(FMT "Invalid state: {}", m_State);
+		return;
+	}
 
 	m_State = STATE_BEFORE_INPUTS;
 }
 
 void CTeeHistorian::BeginInputs()
 {
-	dbg_assert(m_State == STATE_BEFORE_INPUTS, "invalid teehistorian state");
+	if(m_State != STATE_BEFORE_INPUTS)
+	{
+		spdlog::error(FMT "Invalid state: {}", m_State);
+		return;
+	}
 
 	m_State = STATE_INPUTS;
 }
@@ -358,7 +394,7 @@ void CTeeHistorian::RecordPlayerInput(int ClientID, const CNetObj_PlayerInput *p
 		if(m_Debug)
 		{
 			const int *pData = (const int *)&DiffInput;
-			dbg_msg("teehistorian", "diff_input cid=%d %d %d %d %d %d %d %d %d %d %d", ClientID,
+			spdlog::debug(FMT "diff_input cid={} {} {} {} {} {} {} {} {} {} {}", ClientID,
 				pData[0], pData[1], pData[2], pData[3], pData[4],
 				pData[5], pData[6], pData[7], pData[8], pData[9]);
 		}
@@ -371,7 +407,7 @@ void CTeeHistorian::RecordPlayerInput(int ClientID, const CNetObj_PlayerInput *p
 		DiffInput = *pInput;
 		if(m_Debug)
 		{
-			dbg_msg("teehistorian", "new_input cid=%d", ClientID);
+			spdlog::debug(FMT "new_input cid={}", ClientID);
 		}
 	}
 	Buffer.AddInt(ClientID);
@@ -403,7 +439,7 @@ void CTeeHistorian::RecordPlayerMessage(int ClientID, const void *pMsg, int MsgS
 		int MsgID = Unpacker.GetInt();
 		int Sys = MsgID & 1;
 		MsgID >>= 1;
-		dbg_msg("teehistorian", "msg cid=%d sys=%d msgid=%d", ClientID, Sys, MsgID);
+		spdlog::debug(FMT "msg cid={} sys={} msgid={}", ClientID, Sys, MsgID);
 	}
 
 	Write(Buffer.Data(), Buffer.Size());
@@ -411,7 +447,11 @@ void CTeeHistorian::RecordPlayerMessage(int ClientID, const void *pMsg, int MsgS
 
 void CTeeHistorian::RecordPlayerJoin(int ClientID, int Protocol)
 {
-	dbg_assert(Protocol == PROTOCOL_6 || Protocol == PROTOCOL_7, "invalid version");
+	if(Protocol != PROTOCOL_6 && Protocol != PROTOCOL_7)
+	{
+		spdlog::error(FMT "Invalid verseion: {}", Protocol);
+		return;
+	}
 	EnsureTickWritten();
 
 	{
@@ -420,7 +460,7 @@ void CTeeHistorian::RecordPlayerJoin(int ClientID, int Protocol)
 		Buffer.AddInt(ClientID);
 		if(m_Debug)
 		{
-			dbg_msg("teehistorian", "joinver%d cid=%d", Protocol == PROTOCOL_6 ? 6 : 7, ClientID);
+			spdlog::debug(FMT "joinver{} cid={}", Protocol == PROTOCOL_6 ? 6 : 7, ClientID);
 		}
 		CUuid Uuid = Protocol == PROTOCOL_6 ? UUID_TEEHISTORIAN_JOINVER6 : UUID_TEEHISTORIAN_JOINVER7;
 		WriteExtra(Uuid, Buffer.Data(), Buffer.Size());
@@ -433,7 +473,7 @@ void CTeeHistorian::RecordPlayerJoin(int ClientID, int Protocol)
 
 	if(m_Debug)
 	{
-		dbg_msg("teehistorian", "join cid=%d", ClientID);
+		spdlog::debug(FMT "join cid={}", ClientID);
 	}
 
 	Write(Buffer.Data(), Buffer.Size());
@@ -451,7 +491,7 @@ void CTeeHistorian::RecordPlayerDrop(int ClientID, const char *pReason)
 
 	if(m_Debug)
 	{
-		dbg_msg("teehistorian", "drop cid=%d reason='%s'", ClientID, pReason);
+		spdlog::debug(FMT "drop cid={} reason='{}'", ClientID, pReason);
 	}
 
 	Write(Buffer.Data(), Buffer.Size());
@@ -475,7 +515,7 @@ void CTeeHistorian::RecordConsoleCommand(int ClientID, int FlagMask, const char 
 
 	if(m_Debug)
 	{
-		dbg_msg("teehistorian", "ccmd cid=%d cmd='%s'", ClientID, pCmd);
+		spdlog::debug(FMT "ccmd cid={} cmd='{}'", ClientID, pCmd);
 	}
 
 	Write(Buffer.Data(), Buffer.Size());
@@ -485,7 +525,7 @@ void CTeeHistorian::RecordTestExtra()
 {
 	if(m_Debug)
 	{
-		dbg_msg("teehistorian", "test");
+		spdlog::debug(FMT "test");
 	}
 
 	WriteExtra(UUID_TEEHISTORIAN_TEST, "", 0);
@@ -505,7 +545,7 @@ void CTeeHistorian::RecordTeamSaveSuccess(int Team, CUuid SaveID, const char *pT
 	{
 		char aSaveID[UUID_MAXSTRSIZE];
 		FormatUuid(SaveID, aSaveID, sizeof(aSaveID));
-		dbg_msg("teehistorian", "save_success team=%d save_id=%s team_save='%s'", Team, aSaveID, pTeamSave);
+		spdlog::debug(FMT "save_success team={} save_id={} team_save='{}'", Team, aSaveID, pTeamSave);
 	}
 
 	WriteExtra(UUID_TEEHISTORIAN_SAVE_SUCCESS, Buffer.Data(), Buffer.Size());
@@ -521,7 +561,7 @@ void CTeeHistorian::RecordTeamSaveFailure(int Team)
 
 	if(m_Debug)
 	{
-		dbg_msg("teehistorian", "save_failure team=%d", Team);
+		spdlog::debug(FMT "save_failure team={}", Team);
 	}
 
 	WriteExtra(UUID_TEEHISTORIAN_SAVE_FAILURE, Buffer.Data(), Buffer.Size());
@@ -541,7 +581,7 @@ void CTeeHistorian::RecordTeamLoadSuccess(int Team, CUuid SaveID, const char *pT
 	{
 		char aSaveID[UUID_MAXSTRSIZE];
 		FormatUuid(SaveID, aSaveID, sizeof(aSaveID));
-		dbg_msg("teehistorian", "load_success team=%d save_id=%s team_save='%s'", Team, aSaveID, pTeamSave);
+		spdlog::debug(FMT "load_success team={} save_id={} team_save='{}'", Team, aSaveID, pTeamSave);
 	}
 
 	WriteExtra(UUID_TEEHISTORIAN_LOAD_SUCCESS, Buffer.Data(), Buffer.Size());
@@ -557,7 +597,7 @@ void CTeeHistorian::RecordTeamLoadFailure(int Team)
 
 	if(m_Debug)
 	{
-		dbg_msg("teehistorian", "load_failure team=%d", Team);
+		spdlog::debug(FMT "load_failure team={}", Team);
 	}
 
 	WriteExtra(UUID_TEEHISTORIAN_LOAD_FAILURE, Buffer.Data(), Buffer.Size());
@@ -565,14 +605,22 @@ void CTeeHistorian::RecordTeamLoadFailure(int Team)
 
 void CTeeHistorian::EndInputs()
 {
-	dbg_assert(m_State == STATE_INPUTS, "invalid teehistorian state");
+	if(m_State != STATE_INPUTS)
+	{
+		spdlog::error(FMT "Invalid state: {}", m_State);
+		return;
+	}
 
 	m_State = STATE_BEFORE_ENDTICK;
 }
 
 void CTeeHistorian::EndTick()
 {
-	dbg_assert(m_State == STATE_BEFORE_ENDTICK, "invalid teehistorian state");
+	if(m_State != STATE_BEFORE_ENDTICK)
+	{
+		spdlog::error(FMT "Invalid state: {}", m_State);
+		return;
+	}
 	m_State = STATE_BEFORE_TICK;
 }
 
@@ -585,7 +633,7 @@ void CTeeHistorian::RecordDDNetVersionOld(int ClientID, int DDNetVersion)
 
 	if(m_Debug)
 	{
-		dbg_msg("teehistorian", "ddnetver_old cid=%d ddnet_version=%d", ClientID, DDNetVersion);
+		spdlog::debug(FMT "ddnetver_old cid={} ddnet_version={}", ClientID, DDNetVersion);
 	}
 
 	WriteExtra(UUID_TEEHISTORIAN_DDNETVER_OLD, Buffer.Data(), Buffer.Size());
@@ -604,7 +652,7 @@ void CTeeHistorian::RecordDDNetVersion(int ClientID, CUuid ConnectionID, int DDN
 	{
 		char aConnnectionID[UUID_MAXSTRSIZE];
 		FormatUuid(ConnectionID, aConnnectionID, sizeof(aConnnectionID));
-		dbg_msg("teehistorian", "ddnetver cid=%d connection_id=%s ddnet_version=%d ddnet_version_str=%s", ClientID, aConnnectionID, DDNetVersion, pDDNetVersionStr);
+		spdlog::debug(FMT "ddnetver cid={} connection_id={} ddnet_version={} ddnet_version_str={}", ClientID, aConnnectionID, DDNetVersion, pDDNetVersionStr);
 	}
 
 	WriteExtra(UUID_TEEHISTORIAN_DDNETVER, Buffer.Data(), Buffer.Size());
@@ -620,7 +668,7 @@ void CTeeHistorian::RecordAuthInitial(int ClientID, int Level, const char *pAuth
 
 	if(m_Debug)
 	{
-		dbg_msg("teehistorian", "auth_init cid=%d level=%d auth_name=%s", ClientID, Level, pAuthName);
+		spdlog::debug(FMT "auth_init cid={} level={} auth_name={}", ClientID, Level, pAuthName);
 	}
 
 	WriteExtra(UUID_TEEHISTORIAN_AUTH_INIT, Buffer.Data(), Buffer.Size());
@@ -636,7 +684,7 @@ void CTeeHistorian::RecordAuthLogin(int ClientID, int Level, const char *pAuthNa
 
 	if(m_Debug)
 	{
-		dbg_msg("teehistorian", "auth_login cid=%d level=%d auth_name=%s", ClientID, Level, pAuthName);
+		spdlog::debug(FMT "auth_login cid={} level={} auth_name={}", ClientID, Level, pAuthName);
 	}
 
 	WriteExtra(UUID_TEEHISTORIAN_AUTH_LOGIN, Buffer.Data(), Buffer.Size());
@@ -650,7 +698,7 @@ void CTeeHistorian::RecordAuthLogout(int ClientID)
 
 	if(m_Debug)
 	{
-		dbg_msg("teehistorian", "auth_logout cid=%d", ClientID);
+		spdlog::debug(FMT "auth_logout cid={}", ClientID);
 	}
 
 	WriteExtra(UUID_TEEHISTORIAN_AUTH_LOGOUT, Buffer.Data(), Buffer.Size());
@@ -658,7 +706,14 @@ void CTeeHistorian::RecordAuthLogout(int ClientID)
 
 void CTeeHistorian::Finish()
 {
-	dbg_assert(m_State == STATE_START || m_State == STATE_INPUTS || m_State == STATE_BEFORE_ENDTICK || m_State == STATE_BEFORE_TICK, "invalid teehistorian state");
+	if(m_State != STATE_START &&
+		m_State != STATE_INPUTS &&
+		m_State != STATE_BEFORE_ENDTICK &&
+		m_State != STATE_BEFORE_TICK)
+	{
+		spdlog::error(FMT "Invalid state: {}", m_State);
+		return;
+	}
 
 	if(m_State == STATE_INPUTS)
 	{
@@ -675,7 +730,7 @@ void CTeeHistorian::Finish()
 
 	if(m_Debug)
 	{
-		dbg_msg("teehistorian", "finish");
+		spdlog::debug(FMT "finish");
 	}
 
 	Write(Buffer.Data(), Buffer.Size());

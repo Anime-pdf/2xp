@@ -14,6 +14,8 @@
 #include "console.h"
 #include "linereader.h"
 
+#include "spdlog/spdlog.h"
+
 // todo: rework this
 
 const char *CConsole::CResult::GetString(unsigned Index)
@@ -309,14 +311,16 @@ char *CConsole::Format(char *pBuf, int Size, const char *pFrom, const char *pStr
 	char aTimeBuf[80];
 	str_timestamp_format(aTimeBuf, sizeof(aTimeBuf), FORMAT_TIME);
 
-	str_format(pBuf, Size, "[%s][%s]: %s", aTimeBuf, pFrom, pStr);
+	str_format(pBuf, Size, "[%s][%s] %s", aTimeBuf, pFrom, pStr);
 	return pBuf;
 }
 
 void CConsole::Print(int Level, const char *pFrom, const char *pStr, ColorRGBA PrintColor)
 {
-	dbg_msg(pFrom, "%s", pStr);
-	char aBuf[1024];
+	char aBuf[4096];
+	str_format(aBuf, sizeof(aBuf), "[%s] %s", pFrom, pStr);
+	spdlog::info(aBuf);
+	mem_zero(aBuf, sizeof(aBuf));
 	Format(aBuf, sizeof(aBuf), pFrom, pStr);
 	for(int i = 0; i < m_NumPrintCB; ++i)
 	{

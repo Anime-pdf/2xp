@@ -7,6 +7,10 @@
 #include <string>
 #include <iterator>
 
+#include "spdlog/spdlog.h"
+
+#define FMT "[Uuid] "
+
 static const CUuid TEEWORLDS_NAMESPACE = {{// "e05ddaaa-c4e6-4cfb-b642-5d48e80c0029"
 	0xe0, 0x5d, 0xda, 0xaa, 0xc4, 0xe6, 0x4c, 0xfb,
 	0xb6, 0x42, 0x5d, 0x48, 0xe8, 0x0c, 0x00, 0x29}};
@@ -112,12 +116,20 @@ static int GetID(int Index)
 
 void CUuidManager::RegisterName(int ID, const char *pName)
 {
-	dbg_assert(GetIndex(ID) == m_aNames.size(), "names must be registered with increasing ID");
+	if(GetIndex(ID) != m_aNames.size())
+	{
+		spdlog::error(FMT "Names must be registered with increasing ID");
+		return;
+	}
 	CName Name;
 	Name.m_pName = pName;
 	Name.m_Uuid = CalculateUuid(pName);
-	dbg_assert(LookupUuid(Name.m_Uuid) == -1, "duplicate uuid");
 
+	if(LookupUuid(Name.m_Uuid) != -1)
+	{
+		spdlog::error(FMT "Duplicate found: {}", Name.m_pName);
+		return;
+	}
 	m_aNames.add(Name);
 
 	CNameIndexed NameIndexed;
@@ -180,6 +192,6 @@ void CUuidManager::DebugDump() const
 	{
 		char aBuf[UUID_MAXSTRSIZE];
 		FormatUuid(m_aNames[i].m_Uuid, aBuf, sizeof(aBuf));
-		dbg_msg("uuid", "%s %s", aBuf, m_aNames[i].m_pName);
+		spdlog::info(FMT "{} {}", aBuf, m_aNames[i].m_pName);
 	}
 }
